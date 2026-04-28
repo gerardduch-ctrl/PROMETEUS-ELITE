@@ -41,7 +41,7 @@ v4 = st.radio("V4", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key=
 st.markdown("### 4. Filtre 11-22-33-44")
 sel_m_status = st.radio("M", ["OFF", "ON"], horizontal=True, label_visibility="collapsed")
 
-st.markdown("### 5. Filtre Seguitss")
+st.markdown("### 5. Filtre Seguits")
 sel_c_status = st.radio("C", ["OFF", "ON"], horizontal=True, label_visibility="collapsed")
 
 st.divider()
