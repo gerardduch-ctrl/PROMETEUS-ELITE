@@ -22,10 +22,10 @@ st.write("FULMINANT ULTIMATE EDITION - MOTOR FLEXIBLE (1 REPETICIÓ ADMESA)")
 st.markdown("### 1. Desenes")
 col_d1, col_d2 = st.columns(2)
 with col_d1:
-    st.write("**Decena Lliure (0)**")
+    st.write("**Desena Lliure (0)**")
     sel_decena_libre = st.radio("D_LL", ["Aleatori", "1-10", "11-20", "21-30", "31-40", "41-50"], horizontal=True, label_visibility="collapsed")
 with col_d2:
-    st.write("**Decenes Dobles (2)**")
+    st.write("**Desenes Dobles (2)**")
     d_doble_1 = st.radio("D1", ["Aleatori", "1-10", "11-20", "21-30", "31-40", "41-50"], key="d1", horizontal=True, label_visibility="collapsed")
     d_doble_2 = st.radio("D2", ["Aleatori", "1-10", "11-20", "21-30", "31-40", "41-50"], key="d2", horizontal=True, label_visibility="collapsed")
 
@@ -38,10 +38,10 @@ v2 = st.radio("V2", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key=
 v3 = st.radio("V3", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v3")
 v4 = st.radio("V4", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v4")
 
-st.markdown("### 4. Filtre Mellizos")
+st.markdown("### 4. Filtre 11-22-33-44")
 sel_m_status = st.radio("M", ["OFF", "ON"], horizontal=True, label_visibility="collapsed")
 
-st.markdown("### 5. Filtre Clumps")
+st.markdown("### 5. Filtre Seguitss")
 sel_c_status = st.radio("C", ["OFF", "ON"], horizontal=True, label_visibility="collapsed")
 
 st.divider()
