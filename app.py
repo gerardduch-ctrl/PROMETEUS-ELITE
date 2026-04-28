@@ -16,7 +16,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # IMAGEN PROMETEUS (Placeholder - Debes poner tu URL o archivo local)
-# st.image("tu_imagen_prometeus.png", width=200)
+# st.image("prometeus.png", width=150)
 st.title("🔥 PROMETEUS ELITE")
 st.write("SISTEMA ANDROID PARA EUROMILLONES")
 
