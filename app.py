@@ -4,7 +4,7 @@ import random
 # --- CONFIGURACIÓ DE PÀGINA ---
 st.set_page_config(page_title="Prometeus Elite", page_icon="🔥", layout="centered")
 
-# --- ESTILS VISUALS (FIDELS A L'EXEMPLE) ---
+# --- ESTILS VISUALS (ROBUSTOS) ---
 st.markdown("""
     <style>
     .stButton>button { height: 75px; font-size: 24px; font-weight: bold; border-radius: 15px; background-color: #FF4B4B; color: white; margin-top: 25px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); width: 100%; }
@@ -16,12 +16,10 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🔥 PROMETEUS ELITE")
-st.write("FULMINANT ULTIMATE EDITION - MOTOR DE CÀLCUL MASSIU.")
+st.write("FULMINANT ULTIMATE EDITION - MOTOR FLEXIBLE (1 REPETICIÓ ADMESA)")
 
 # --- PANELLS DE CONFIGURACIÓ ---
-
 st.markdown("### 1. Desenes")
-st.markdown("<p class='desc-text'>Patró 2-2-1-1-0. Tria quina queda buida i quines dues porten doble càrrega.</p>", unsafe_allow_html=True)
 col_d1, col_d2 = st.columns(2)
 with col_d1:
     st.write("**Decena Lliure (0)**")
@@ -32,11 +30,9 @@ with col_d2:
     d_doble_2 = st.radio("D2", ["Aleatori", "1-10", "11-20", "21-30", "31-40", "41-50"], key="d2", horizontal=True, label_visibility="collapsed")
 
 st.markdown("### 2. Unitat Repetida")
-st.markdown("<p class='desc-text'>Força una terminació doble (0-9).</p>", unsafe_allow_html=True)
 sel_un_rep = st.radio("UR", ["Aleatori", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, label_visibility="collapsed")
 
 st.markdown("### 3. Unitats Vetades")
-st.markdown("<p class='desc-text'>Elimina fins a 4 terminacions completes.</p>", unsafe_allow_html=True)
 v1 = st.radio("V1", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v1")
 v2 = st.radio("V2", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v2")
 v3 = st.radio("V3", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v3")
@@ -50,94 +46,95 @@ sel_c_status = st.radio("C", ["OFF", "ON"], horizontal=True, label_visibility="c
 
 st.divider()
 
-# --- MOTOR DE CÀLCUL ROBUST (ESTIL PRIMITIVA PERÒ MILLORAT) ---
+# --- MOTOR DE CÀLCUL AMB FLEXIBILITAT (MAX 1 REPETICIÓ) ---
 
-def generar_sistema():
+def motor_flexible():
     vetos = [v for v in [v1, v2, v3, v4] if v != "Cap"]
     tramos = [(1,10), (11,20), (21,30), (31,40), (41,50)]
     tramos_n = ["1-10", "11-20", "21-30", "31-40", "41-50"]
     mells_nums = {11, 22, 33, 44}
     
     resultats = []
-    intents_globals = 500000  # Muscle massiu
     
-    while len(resultats) < 2 and intents_globals > 0:
-        intents_globals -= 1
+    # Bucle per generar les dues apostes
+    while len(resultats) < 2:
+        success_aposta = False
+        intents_local = 50000
         
-        # 1. Decidir perfil de desenes per aquesta iteració
-        idx_ll = random.randint(0,4) if sel_decena_libre == "Aleatori" else tramos_n.index(sel_decena_libre)
-        rest = [i for i in range(5) if i != idx_ll]
-        
-        idx_db = []
-        for d in [d_doble_1, d_doble_2]:
-            if d != "Aleatori":
-                val = tramos_n.index(d)
-                if val != idx_ll: idx_db.append(val)
-        idx_db = list(set(idx_db))
-        while len(idx_db) < 2:
-            opcio = random.choice(rest)
-            if opcio not in idx_db: idx_db.append(opcio)
-        idx_si = [i for i in rest if i not in idx_db]
-        
-        # 2. Generar combinació candidata
-        prohibits = resultats[0] if len(resultats) == 1 else []
-        temp_comb = []
-        possible = True
-        
-        # Extreure números segons patró 2-2-1-1-0
-        for i in idx_db:
-            p = [n for n in range(tramos[i][0], tramos[i][1]+1) if n % 10 not in vetos and n not in prohibits]
-            if len(p) < 2: possible = False; break
-            temp_comb.extend(random.sample(p, 2))
-        if not possible: continue
+        while not success_aposta and intents_local > 0:
+            intents_local -= 1
             
-        for i in idx_si:
-            p = [n for n in range(tramos[i][0], tramos[i][1]+1) if n % 10 not in vetos and n not in prohibits]
-            if len(p) < 1: possible = False; break
-            temp_comb.extend(random.sample(p, 1))
-        
-        if not possible or len(temp_comb) != 6: continue
-        
-        # 3. FILTRES DE CRIBA (L'EMBUT)
-        # Paritat 3P/3I
-        if sum(1 for n in temp_comb if n % 2 == 0) != 3: continue
-        
-        # Unitats (Terminacions)
-        terms = [n % 10 for n in temp_comb]
-        counts = {x: terms.count(x) for x in set(terms)}
-        if list(counts.values()).count(2) != 1: continue 
-        if sel_un_rep != "Aleatori" and counts.get(sel_un_rep) != 2: continue
-        
-        # Mellizos
-        p_mells = [n for n in temp_comb if n in mells_nums]
-        if sel_m_status == "ON":
-            if len(p_mells) != 1: continue
-        else:
-            if len(p_mells) > 0: continue
+            # Patró desenes
+            idx_ll = random.randint(0,4) if sel_decena_libre == "Aleatori" else tramos_n.index(sel_decena_libre)
+            rest = [i for i in range(5) if i != idx_ll]
+            idx_db = []
+            for d in [d_doble_1, d_doble_2]:
+                if d != "Aleatori":
+                    val = tramos_n.index(d)
+                    if val != idx_ll: idx_db.append(val)
+            idx_db = list(set(idx_db))
+            while len(idx_db) < 2:
+                op = random.choice(rest)
+                if op not in idx_db: idx_db.append(op)
+            idx_si = [i for i in rest if i not in idx_db]
             
-        # Clumps (Seguits)
-        temp_comb.sort()
-        seg = sum(1 for j in range(len(temp_comb)-1) if temp_comb[j+1] == temp_comb[j]+1)
-        if sel_c_status == "ON":
-            if seg != 1: continue
-        else:
-            if seg > 0: continue
+            temp_comb = []
+            possible = True
             
-        # Si arriba aquí, la combinació és vàlida
-        resultats.append(temp_comb)
-        
+            # Generació per desenes
+            for i in idx_db:
+                p = [n for n in range(tramos[i][0], tramos[i][1]+1) if n % 10 not in vetos]
+                if len(p) < 2: possible = False; break
+                temp_comb.extend(random.sample(p, 2))
+            for i in idx_si:
+                p = [n for n in range(tramos[i][0], tramos[i][1]+1) if n % 10 not in vetos]
+                if len(p) < 1: possible = False; break
+                temp_comb.extend(random.sample(p, 1))
+            
+            if not possible: continue
+            
+            # Filtre Paritat
+            if sum(1 for n in temp_comb if n % 2 == 0) != 3: continue
+            
+            # Filtre Unitats
+            terms = [n % 10 for n in temp_comb]
+            counts = {x: terms.count(x) for x in set(terms)}
+            if list(counts.values()).count(2) != 1: continue 
+            if sel_un_rep != "Aleatori" and counts.get(sel_un_rep) != 2: continue
+            
+            # Filtre Mellizos
+            pm = [n for n in temp_comb if n in mells_nums]
+            if sel_m_status == "ON":
+                if len(pm) != 1: continue
+            else:
+                if len(pm) > 0: continue
+            
+            # Filtre Clumps
+            temp_comb.sort()
+            seg = sum(1 for j in range(len(temp_comb)-1) if temp_comb[j+1] == temp_comb[j]+1)
+            if sel_c_status == "ON":
+                if seg != 1: continue
+            else:
+                if seg > 0: continue
+            
+            # VALIDACIÓ DE REPETICIÓ ENTRE A I B
+            if len(resultats) == 1:
+                set_A = set(resultats[0])
+                set_B = set(temp_comb)
+                comuns = set_A.intersection(set_B)
+                if len(comuns) > 1: continue # Si es repeteixen més d'1, descartem
+            
+            resultats.append(temp_comb)
+            success_aposta = True
+            
     return resultats
 
-# --- ACCIÓ ---
 if st.button("🚀 GENERAR 2 APOSTES PROMETEUS ELITE"):
-    with st.spinner('Executant motor d\'alta robustesa...'):
-        apostes = generar_sistema()
+    with st.spinner('Calculant amb marge de repetició admès...'):
+        apostes = motor_flexible()
         
-    if len(apostes) < 2:
-        st.error("⚠️ Filtres massa restrictius per trobar 12 números inèdits. Prova de reduir els vetos.")
-    else:
-        st.markdown("### 🔮 Combinacions Resultants")
-        for idx, a in enumerate(apostes):
-            st.success(f"APOSTA {chr(65+idx)}: {' - '.join(map(str, sorted(a)))}")
+    st.markdown("### 🔮 Combinacions (Màxim 1 repetit entre A i B)")
+    for idx, a in enumerate(apostes):
+        st.success(f"APOSTA {chr(65+idx)}: {' - '.join(map(str, sorted(a)))}")
 
 st.markdown("<br><br>", unsafe_allow_html=True)
