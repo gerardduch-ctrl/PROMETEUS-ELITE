@@ -1,129 +1,132 @@
-
 import streamlit as st
 import random
 
 # --- CONFIGURACIÓ DE PÀGINA ---
 st.set_page_config(page_title="Prometeus Elite", page_icon="🔥", layout="centered")
 
-# --- ESTILS VISUALS (Minimalista) ---
+# --- ESTILS VISUALS (FIDELS AL TEU PROJECTE) ---
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; height: 60px; font-size: 20px; font-weight: bold; border-radius: 10px; background-color: #000000; color: white; border: 2px solid #FF4B4B; }
-    h3 { color: #FF4B4B; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-    .card { background-color: #f9f9f9; padding: 20px; border-radius: 15px; border-left: 5px solid #FF4B4B; margin-bottom: 20px; }
-    .number-circle { display: inline-block; width: 40px; height: 40px; line-height: 40px; border-radius: 50%; background: #262730; color: white; text-align: center; margin: 4px; font-weight: bold; }
+    .stButton>button { height: 75px; font-size: 24px; font-weight: bold; border-radius: 15px; background-color: #FF4B4B; color: white; margin-top: 25px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); width: 100%; }
+    h3 { margin-top: 25px; color: #1E1E1E; border-bottom: 2px solid #FF4B4B; width: 100%; padding-bottom: 8px; font-family: 'Helvetica', sans-serif; }
+    .desc-text { font-size: 14px; color: #555; margin-bottom: 15px; font-style: italic; line-height: 1.4; }
+    div.row-widget.stRadio > div{ flex-direction:row; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .stSuccess { font-size: 22px !important; font-weight: bold; border-radius: 10px; border-left: 5px solid #FF4B4B; }
+    .veto-sub { font-size: 12px; color: #888; text-align: center; margin-top: -10px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# IMAGEN PROMETEUS (Placeholder - Debes poner tu URL o archivo local)
-# st.image("prometeus.png", width=150)
+# Encapçalament amb la teva imatge
+st.image("prometeus.png", width=250) # Recorda tenir el fitxer prometeus.png al GitHub
 st.title("🔥 PROMETEUS ELITE")
-st.write("SISTEMA ANDROID PARA EUROMILLONES")
+st.write("SISTEMA ANDROID EXCLUSIU PER A EUROMILLONES.")
 
-# --- SELECTORES (INTERFAZ) ---
-with st.expander("🛠️ CONFIGURACIÓN DE FILTROS", expanded=True):
-    st.markdown("### Selector Decenas")
-    # Tramos: 1-10, 11-20, 21-30, 31-40, 41-50
-    dec_libre = st.selectbox("Decena LIBRE (0 números)", ["Aleatorio", "1-10", "11-20", "21-30", "31-40", "41-50"])
-    dec_dobles = st.multiselect("Dos Decenas DOBLES (2 números c/u)", ["1-10", "11-20", "21-30", "31-40", "41-50"], max_selections=2)
+# --- PANELLS DE CONFIGURACIÓ (ESTÈTICA ORIGINAL) ---
 
-    st.markdown("### Selector Unidades")
-    u_repe = st.selectbox("Unidad que se REPITE", ["Aleatorio"] + list(range(10)))
-    u_veto = st.multiselect("Unidades VETADAS (Máximo 4)", list(range(10)), max_selections=4)
+st.markdown("### 1. Selector Desenis")
+st.markdown("<p class='desc-text'>Tria quina desena queda lliure (0 números) i quines dues tindran càrrega doble (2 números). Si no tries, serà aleatori.</p>", unsafe_allow_html=True)
+col_d1, col_d2 = st.columns(2)
+with col_d1:
+    sel_decena_libre = st.selectbox("Decena LLIURE (0)", ["Cap", "1-10", "11-20", "21-30", "31-40", "41-50"])
+with col_d2:
+    sel_decenas_dobles = st.multiselect("Dues Desenis DOBLES (2)", ["1-10", "11-20", "21-30", "31-40", "41-50"], max_selections=2)
 
-    st.markdown("### Selectores Especiales")
-    col1, col2 = st.columns(2)
-    with col1:
-        s_mellizos = st.checkbox("SELECTOR MELLIZOS (11, 22, 33, 44)")
-    with col2:
-        s_clumps = st.checkbox("SELECTOR CLUMPS (2 seguidos)")
+st.markdown("### 2. Selector Unidad Repetida")
+st.markdown("<p class='desc-text'>Selecciona quina terminació (0-9) vols que es repeteixi exactament dues vegades en la combinació.</p>", unsafe_allow_html=True)
+sel_un_rep = st.radio("UR", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, label_visibility="collapsed")
 
-# --- LÓGICA DE FILTRADO ---
-def generar_combinacion(vetados, forbidden_nums, d_libre, d_dobles, u_repetida, mellizos_on, clumps_on):
+st.markdown("### 3. Selector Unidad Vetada")
+st.markdown("<p class='desc-text'>Veta fins a 4 terminacions. Aquests números no apareixeran mai. El veto mana sobre la repetició.</p>", unsafe_allow_html=True)
+v1 = st.radio("V1", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v1", label_visibility="collapsed")
+v2 = st.radio("V2", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v2", label_visibility="collapsed")
+v3 = st.radio("V3", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v3", label_visibility="collapsed")
+v4 = st.radio("V4", ["Cap", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9], horizontal=True, key="v4", label_visibility="collapsed")
+
+st.markdown("### 4. Selector Mellizos")
+st.markdown("<p class='desc-text'>Activa per incloure exactament un número besson (11, 22, 33, 44) per aposta.</p>", unsafe_allow_html=True)
+sel_m_status = st.radio("M", ["OFF", "ON"], horizontal=True, label_visibility="collapsed")
+
+st.markdown("### 5. Selector Clumps")
+st.markdown("<p class='desc-text'>Activa per forçar l'aparició d'una única parella de números seguits per aposta.</p>", unsafe_allow_html=True)
+sel_c_status = st.radio("C", ["OFF", "ON"], horizontal=True, label_visibility="collapsed")
+
+st.divider()
+
+# --- MOTOR LÒGIC PROMETEUS ELITE ---
+
+def generar_aposta(vetos, prohibits, d_lliure, d_dobles, u_repe, mells_on, clumps_on):
     tramos = [(1,10), (11,20), (21,30), (31,40), (41,50)]
-    tramos_nombres = ["1-10", "11-20", "21-30", "31-40", "41-50"]
+    tramos_n = ["1-10", "11-20", "21-30", "31-40", "41-50"]
     
-    # 1. Definir patrón de decenas 2-2-1-1-0
-    if d_libre == "Aleatorio":
-        libre_idx = random.randint(0, 4)
-    else:
-        libre_idx = tramos_nombres.index(d_libre)
-    
-    restantes = [i for i in range(5) if i != libre_idx]
-    
-    if len(d_dobles) == 2:
-        dobles_indices = [tramos_nombres.index(d) for d in d_dobles]
-        simples_indices = [i for i in restantes if i not in dobles_indices]
-    else:
-        dobles_indices = random.sample(restantes, 2)
-        simples_indices = [i for i in restantes if i not in dobles_indices]
-
     intentos = 0
-    while intentos < 5000:
+    while intentos < 10000:
         intentos += 1
+        # Definir configuració de desenes
+        idx_lliure = random.randint(0,4) if d_lliure == "Cap" else tramos_n.index(d_lliure)
+        restants = [i for i in range(5) if i != idx_lliure]
+        
+        if len(d_dobles) == 2:
+            idx_dobles = [tramos_n.index(d) for d in d_dobles]
+            idx_simples = [i for i in restants if i not in idx_dobles]
+        else:
+            idx_dobles = random.sample(restants, 2)
+            idx_simples = [i for i in restants if i not in idx_dobles]
+            
         comb = []
-        
-        # Generar números por decena según patrón
-        for idx in dobles_indices:
-            pool = [n for n in range(tramos[idx][0], tramos[idx][1]+1) if n % 10 not in vetados and n not in forbidden_nums]
-            if len(pool) < 2: break
-            comb.extend(random.sample(pool, 2))
-        for idx in simples_indices:
-            pool = [n for n in range(tramos[idx][0], tramos[idx][1]+1) if n % 10 not in vetados and n not in forbidden_nums]
-            if len(pool) < 1: break
-            comb.extend(random.sample(pool, 1))
-        
+        for idx in idx_dobles:
+            p = [n for n in range(tramos[idx][0], tramos[idx][1]+1) if n % 10 not in vetos and n not in prohibits]
+            if len(p) < 2: break
+            comb.extend(random.sample(p, 2))
+        for idx in idx_simples:
+            p = [n for n in range(tramos[idx][0], tramos[idx][1]+1) if n % 10 not in vetos and n not in prohibits]
+            if len(p) < 1: break
+            comb.extend(random.sample(p, 1))
+            
         if len(comb) != 6: continue
         
-        # Filtro Paridad (3P/3I)
+        # Filtre Paritat (3P/3I)
         if sum(1 for n in comb if n % 2 == 0) != 3: continue
         
-        # Filtro Unidades (Terminaciones)
-        terminaciones = [n % 10 for n in comb]
-        counts = {x: terminaciones.count(x) for x in set(terminaciones)}
-        if list(counts.values()).count(2) != 1: continue # Solo una unidad repetida
-        if u_repetida != "Aleatorio" and counts.get(u_repetida) != 2: continue
-
-        # Filtro Mellizos (11, 22, 33, 44)
+        # Filtre Unitats
+        terms = [n % 10 for n in comb]
+        counts = {x: terms.count(x) for x in set(terms)}
+        if list(counts.values()).count(2) != 1: continue 
+        if u_repe != "Cap" and counts.get(u_repe) != 2: continue
+        
+        # Filtre Mellizos
         mells = {11, 22, 33, 44}
-        present_mells = [n for n in comb if n in mells]
-        if mellizos_on:
-            if len(present_mells) != 1: continue
+        p_mells = [n for n in comb if n in mells]
+        if mells_on == "ON":
+            if len(p_mells) != 1: continue
         else:
-            if len(present_mells) > 0: continue
+            if len(p_mells) > 0: continue
             
-        # Filtro Clumps (Seguidos)
+        # Filtre Clumps
         comb.sort()
-        seguits = sum(1 for i in range(len(comb)-1) if comb[i+1] == comb[i]+1)
-        if clumps_on:
-            if seguits != 1: continue
+        seg = sum(1 for i in range(len(comb)-1) if comb[i+1] == comb[i]+1)
+        if clumps_on == "ON":
+            if seg != 1: continue
         else:
-            if seguits > 0: continue
+            if seg > 0: continue
             
         return comb
     return None
 
-# --- BOTÓN GENERAR ---
-if st.button("PROFETIZAR COMBINACIONES"):
-    # Generar Apuesta A
-    aA = generar_combinacion(u_veto, [], dec_libre, dec_dobles, u_repe, s_mellizos, s_clumps)
-    
-    if aA:
-        # Generar Apuesta B (Inéditos respecto a A)
-        aB = generar_combinacion(u_veto, aA, dec_libre, dec_dobles, u_repe, s_mellizos, s_clumps)
-        
-        if aB:
-            st.markdown("### 🔮 RESULTADO PROMETEUS ELITE")
+# --- ACCIÓ I RESULTATS ---
+if st.button("🚀 GENERAR 2 APOSTES PROMETEUS ELITE"):
+    vetos = [v for v in [v1, v2, v3, v4] if v != "Cap"]
+    with st.spinner('Aplicant cribratge d\'alta precisió...'):
+        aA = generar_aposta(vetos, [], sel_decena_libre, sel_decenas_dobles, sel_un_rep, sel_m_status, sel_c_status)
+        if aA:
+            aB = generar_aposta(vetos, aA, sel_decena_libre, sel_decenas_dobles, sel_un_rep, sel_m_status, sel_c_status)
             
-            for i, a in enumerate([aA, aB]):
-                with st.container():
-                    st.markdown(f"<div class='card'><b>COMBINACIÓN {chr(65+i)}</b><br>", unsafe_allow_html=True)
-                    nums_html = "".join([f"<div class='number-circle'>{n}</div>" for n in sorted(a)])
-                    st.markdown(nums_html, unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
+            if aB:
+                st.markdown("### 🔮 Resultats Inèdits (12 números)")
+                st.success(f"APOSTA A: {' - '.join(map(str, sorted(aA)))}")
+                st.success(f"APOSTA B: {' - '.join(map(str, sorted(aB)))}")
+            else:
+                st.error("⚠️ No s'ha pogut generar la segona aposta inèdita. Massa restriccions.")
         else:
-            st.error("No se pudo generar la segunda apuesta inédita. Prueba a reducir vetos.")
-    else:
-        st.error("Combinación imposible con esos filtros. Revisa los vetos o las decenas.")
+            st.error("⚠️ Filtres massa estrictes. Revisa els vetos o les desenis.")
 
-st.info("Reglas aplicadas: 12 números únicos, Paridad 3P/3I, Patrón Decenas 2-2-1-1-0.")
+st.markdown("<br><br>", unsafe_allow_html=True)
