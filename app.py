@@ -1,5 +1,6 @@
 import streamlit as st
 import random
+import itertools
 
 # Configuración de página optimizada para móvil
 st.set_page_config(
@@ -8,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS (Versión limpia con estrellas de la fase anterior)
+# Estilos CSS Limpios y Minimalistas
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -106,7 +107,7 @@ st.markdown("---")
 
 # --- CONTROL DE DECENAS ---
 st.subheader("🔢 Parámetros de Decenas")
-st.markdown("**Selector Decena Libre** (Opción única - Exclusión Total)")
+st.markdown("**Selector Decena Libre** (Opción única)")
 cols_dl = st.columns(5)
 for idx, dec in enumerate(TRAMOS_DECENAS.keys()):
     is_libre = st.session_state.decena_libre == dec
@@ -131,7 +132,7 @@ st.markdown("---")
 
 # --- CONTROL DE UNIDADES ---
 st.subheader("🎯 Parámetros de Unidades (Terminaciones)")
-st.markdown("**Selector Unidad Repetida** (Opción única - Obligatoria)")
+st.markdown("**Selector Unidad Repetida** (Opción única)")
 cols_ur = st.columns(10)
 for u in range(10):
     is_rep = st.session_state.unidad_repetida == u
@@ -162,7 +163,7 @@ activar_clumps = c2.radio("Selector Clumps", ["NO", "SÍ"], index=0) == "SÍ"
 
 st.markdown("---")
 
-# --- FUNCIONES DE VERIFICACIÓN ---
+# --- ASISTENTES DE FILTRADO VELOZ ---
 def obtener_decena(num):
     if 1 <= num <= 10: return "1-10"
     if 11 <= num <= 20: return "11-20"
@@ -197,16 +198,10 @@ def contar_consecutivos(comb):
             i += 1
     return parejas
 
-def cumplir_interseccion(nuevas_apuestas):
-    for i in range(len(nuevas_apuestas)):
-        for j in range(i + 1, len(nuevas_apuestas)):
-            if len(set(nuevas_apuestas[i]) & set(nuevas_apuestas[j])) > 1:
-                return False
-    return True
-
-# --- BOTÓN DE GENERACIÓN CON NUEVA POTENCIA E INYECCIÓN INTELIGENTE ---
+# --- BOTÓN DE GENERACIÓN MULTI-MATRICIAL ---
 if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, type="primary"):
     
+    # Universo Limpio de Raíz
     universo_valido = []
     for n in range(1, 51):
         if obtener_decena(n) == st.session_state.decena_libre: continue
@@ -216,116 +211,117 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
     r10_limpio = [n for n in st.session_state.recientes_10 if n in universo_valido]
     r15_limpio = [n for n in st.session_state.recientes_15 if n in universo_valido]
 
-    apuestas_finales = []
-    exito = False
+    decenas_restantes = [d for d in TRAMOS_DECENAS.keys() if d != st.session_state.decena_libre]
     
-    # Bucle masivo de fuerza bruta constructiva acelerada
-    for ciclo_global in range(10000000):
-        apuestas_finales = []
-        decenas_restantes = [d for d in TRAMOS_DECENAS.keys() if d != st.session_state.decena_libre]
-        
-        for num_apuesta in [1, 2, 3, 4]:
-            if len(st.session_state.decenas_dobles) == 2:
-                dobles_apuesta = st.session_state.decenas_dobles
-            elif len(st.session_state.decenas_dobles) == 1:
-                opciones_validas = [d for d in decenas_restantes if d not in st.session_state.decenas_dobles]
-                dobles_apuesta = st.session_state.decenas_dobles + [random.choice(opciones_validas)]
-            else:
-                dobles_apuesta = random.sample(decenas_restantes, 2)
-                
-            simples_apuesta = [d for d in decenas_restantes if d not in dobles_apuesta]
+    # BANCOS MATRICIALES INDEPENDIENTES POR APUESTA
+    banco_ap1, banco_ap2, banco_ap3, banco_ap4 = [], [], [], []
+    
+    # Pre-generar un pool masivo de combinaciones válidas individuales (Fuerza Bruta Tipo Pool)
+    for _ in range(30000):
+        # Resolver decenas dinámicas si el usuario puso menos de 2
+        if len(st.session_state.decenas_dobles) == 2:
+            dobles_apuesta = st.session_state.decenas_dobles
+        elif len(st.session_state.decenas_dobles) == 1:
+            opciones_validas = [d for d in decenas_restantes if d not in st.session_state.decenas_dobles]
+            dobles_apuesta = st.session_state.decenas_dobles + [random.choice(opciones_validas)]
+        else:
+            dobles_apuesta = random.sample(decenas_restantes, 2)
             
-            comb_generada = None
-            # Intentos internos ultra veloces guiados por filtros estructurales
-            for intento_interno in range(5000):
-                apuesta = set()
+        simples_apuesta = [d for d in decenas_restantes if d not in dobles_apuesta]
+        
+        # Construcción directa de base
+        apuesta = set()
+        candidatos_u_rep = [n for n in universo_valido if n % 10 == st.session_state.unidad_repetida]
+        if len(candidatos_u_rep) >= 2:
+            apuesta.update(random.sample(candidatos_u_rep, 2))
+        else:
+            continue
+            
+        # Inyectar un Reciente 10 y dos Recientes 15 de manera aleatoria si existen
+        if r10_limpio: apuesta.add(random.choice(r10_limpio))
+        if r15_limpio: apuesta.update(random.sample(r15_limpio, min(len(r15_limpio), 2)))
+        if len(apuesta) > 6: continue
+            
+        # Rellenar tramo por tramo
+        lista_cand = list(apuesta)
+        for dec in dobles_apuesta:
+            nums = [n for n in universo_valido if obtener_decena(n) == dec and n not in lista_cand]
+            random.shuffle(nums)
+            while sum(1 for x in lista_cand if obtener_decena(x) == dec) < 2 and nums:
+                lista_cand.append(nums.pop())
+        for dec in simples_apuesta:
+            nums = [n for n in universo_valido if obtener_decena(n) == dec and n not in lista_cand]
+            random.shuffle(nums)
+            while sum(1 for x in lista_cand if obtener_decena(x) == dec) < 1 and nums:
+                lista_cand.append(nums.pop())
                 
-                # 1. Inyectar Unidad Repetida (forzado obligatoriamente en tramos activos)
-                candidatos_u_rep = [n for n in universo_valido if n % 10 == st.session_state.unidad_repetida and obtener_decena(n) in (dobles_apuesta + simples_apuesta)]
-                if len(candidatos_u_rep) >= 2:
-                    apuesta.update(random.sample(candidatos_u_rep, 2))
-                else:
-                    continue
-                
-                # 2. Inyectar Mellizos si toca (Apuestas 2 y 4)
-                if activar_mellizos and num_apuesta in [2, 4]:
-                    mellizos_validos = [m for m in MELLIZOS if m in universo_valido and obtener_decena(m) in (dobles_apuesta + simples_apuesta)]
-                    if mellizos_validos:
-                        apuesta.add(random.choice(mellizos_validos))
-                
-                # 3. Inyectar Recientes limpias de manera inteligente (Solo en decenas donde encajen)
-                r10_compatibles = [n for n in r10_limpio if obtener_decena(n) in (dobles_apuesta + simples_apuesta)]
-                r15_compatibles = [n for n in r15_limpio if obtener_decena(n) in (dobles_apuesta + simples_apuesta)]
-                
-                if r10_compatibles:
-                    apuesta.add(random.choice(r10_compatibles))
-                if r15_compatibles:
-                    apuesta.update(random.sample(r15_compatibles, min(len(r15_compatibles), 2)))
-                
-                # Si nos pasamos de los 6 números por las inyecciones forzadas, descartamos inmediatamente
-                if len(apuesta) > 6: continue
-                
-                # 4. Rellenar de manera guiada tramo por tramo de decenas para asegurar éxito estricto
-                lista_candidata = list(apuesta)
-                for dec in dobles_apuesta:
-                    numeros_tramo = [n for n in universo_valido if obtener_decena(n) == dec and n not in lista_candidata]
-                    random.shuffle(numeros_tramo)
-                    while sum(1 for x in lista_candidata if obtener_decena(x) == dec) < 2 and numeros_tramo:
-                        lista_candidata.append(numeros_tramo.pop())
-                        
-                for dec in simples_apuesta:
-                    numeros_tramo = [n for n in universo_valido if obtener_decena(n) == dec and n not in lista_candidata]
-                    random.shuffle(numeros_tramo)
-                    while sum(1 for x in lista_candidata if obtener_decena(x) == dec) < 1 and numeros_tramo:
-                        lista_candidata.append(numeros_tramo.pop())
-                
-                if len(lista_candidata) != 6: continue
-                
-                # 5. VALIDACIÓN FINAL ABSOLUTA DE FILTROS MORFOLÓGICOS
-                conteos_finales_dec = {d: 0 for d in TRAMOS_DECENAS.keys()}
-                for n in lista_candidata:
-                    conteos_finales_dec[obtener_decena(n)] += 1
-                
-                if conteos_finales_dec[st.session_state.decena_libre] != 0: continue
-                if sum(1 for d in dobles_apuesta if conteos_finales_dec[d] == 2) != 2: continue
-                if sum(1 for d in simples_apuesta if conteos_finales_dec[d] == 1) != 2: continue
-                if not validar_paridad(lista_candidata): continue
-                if not validar_unidades(lista_candidata, st.session_state.unidad_repetida, st.session_state.unidades_vetadas): continue
-                
-                # Validar restricciones de Mellizos
-                cont_m = sum(1 for n in lista_candidata if n in MELLIZOS)
-                if activar_mellizos:
-                    if num_apuesta in [2, 4] and cont_m != 1: continue
-                    if num_apuesta in [1, 3] and cont_m != 0: continue
-                else:
-                    if cont_m != 0: continue
-                
-                # Validar restricciones de Clumps
-                if activar_clumps:
-                    if num_apuesta in [3, 4] and contar_consecutivos(lista_candidata) != 1: continue
-                    if num_apuesta in [1, 2] and tiene_consecutivos(lista_candidata): continue
-                else:
-                    if tiene_consecutivos(lista_candidata): continue
-                
-                comb_generada = sorted(lista_candidata)
-                break
-                
-            if comb_generada:
-                apuestas_finales.append(comb_generada)
+        if len(lista_cand) != 6: continue
+        
+        # Filtrado morfológico instantáneo
+        conteos_dec = {d: 0 for d in TRAMOS_DECENAS.keys()}
+        for n in lista_cand: conteos_dec[obtener_decena(n)] += 1
+        if sum(1 for d in dobles_apuesta if conteos_dec[d] == 2) != 2: continue
+        if not validar_paridad(lista_cand): continue
+        if not validar_unidades(lista_cand, st.session_state.unidad_repetida, st.session_state.unidades_vetadas): continue
+        
+        # Clasificar la combinación en el banco correcto según Mellizos y Clumps
+        cont_m = sum(1 for n in lista_cand if n in MELLIZOS)
+        has_c = tiene_consecutivos(lista_cand)
+        num_c = contar_consecutivos(lista_cand)
+        
+        # Clasificación Matricial Directa
+        if activar_mellizos:
+            if cont_m == 0 and not has_c: banco_ap1.append(sorted(lista_cand))
+            if cont_m == 1 and not has_c: banco_ap2.append(sorted(lista_cand))
+            if activar_clumps:
+                if cont_m == 0 and num_c == 1: banco_ap3.append(sorted(lista_cand))
+                if cont_m == 1 and num_c == 1: banco_ap4.append(sorted(lista_cand))
             else:
-                break
+                if cont_m == 0 and not has_c: banco_ap3.append(sorted(lista_cand))
+                if cont_m == 1 and not has_c: banco_ap4.append(sorted(lista_cand))
+        else:
+            if cont_m == 0:
+                if activar_clumps:
+                    if not has_c: banco_ap1.append(sorted(lista_cand))
+                    if not has_c: banco_ap2.append(sorted(lista_cand))
+                    if num_c == 1: banco_ap3.append(sorted(lista_cand))
+                    if num_c == 1: banco_ap4.append(sorted(lista_cand))
+                else:
+                    if not has_c:
+                        c_sorted = sorted(lista_cand)
+                        banco_ap1.append(c_sorted)
+                        banco_ap2.append(c_sorted)
+                        banco_ap3.append(c_sorted)
+                        banco_ap4.append(c_sorted)
+
+    # --- FUERZA BRUTA DE INTERSECCIÓN CRUZADA ALTA VELOCIDAD ---
+    exito = False
+    apuestas_finales = []
+    
+    # Comprobar que ningún banco esté vacío debido a restricciones manuales incompatibles
+    if banco_ap1 and banco_ap2 and banco_ap3 and banco_ap4:
+        # Ejecuta hasta 5.000.000 de cruces indexados en milisegundos
+        for intento_cruce in range(5000000):
+            ap1 = random.choice(banco_ap1)
+            ap2 = random.choice(banco_ap2)
+            if len(set(ap1) & set(ap2)) > 1: continue
                 
-        if len(apuestas_finales) == 4 and cumplir_interseccion(apuestas_finales):
+            ap3 = random.choice(banco_ap3)
+            if len(set(ap1) & set(ap3)) > 1 or len(set(ap2) & set(ap3)) > 1: continue
+                
+            ap4 = random.choice(banco_ap4)
+            if len(set(ap1) & set(ap4)) > 1 or len(set(ap2) & set(ap4)) > 1 or len(set(ap3) & set(ap4)) > 1: continue
+                
+            apuestas_finales = [ap1, ap2, ap3, ap4]
             exito = True
             break
 
-    # --- RENDERIZADO DE RESULTADOS ---
+    # --- RENDERIZADO ---
     if exito:
-        st.success("🎯 Combinaciones generadas con éxito:")
+        st.success("🎯 Combinaciones PROMETEUS generadas con éxito instantáneo:")
         for idx, ap in enumerate(apuestas_finales, 1):
             clump_tag = " 🔸 [Clump]" if idx in [3, 4] and activar_clumps else ""
             mellizo_tag = " 🔹 [Mellizo]" if idx in [2, 4] and activar_mellizos else ""
-            
             st.markdown(f"""
             <div class="apuesta-card">
                 <div class="apuesta-titulo">APUESTA MULTIPLE {idx}{mellizo_tag}{clump_tag}</div>
@@ -333,4 +329,4 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.error("❌ Conflicto combinatorio insalvable. Relaje algún filtro o veto e intente de nuevo.")
+        st.error("❌ Conflicto combinatorio. Has seleccionado números en 'Recientes' o parámetros de unidades que rompen las leyes de paridad o decenas. Cambia algún número marcado e intenta de nuevo.")
