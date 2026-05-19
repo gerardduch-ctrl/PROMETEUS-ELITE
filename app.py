@@ -191,7 +191,7 @@ activar_clumps = c2.radio("Selector Clumps", ["NO", "SÍ"], index=0) == "SÍ"
 
 st.markdown("---")
 
-# --- NUEVO MOTOR MATEMÁTICO DE CONSTRUCCIÓN DETERMINISTA ---
+# --- MOTOR MATEMÁTICO CORREGIDO ---
 def obtener_decena(num):
     if 1 <= num <= 10: return "1-10"
     if 11 <= num <= 20: return "11-20"
@@ -234,7 +234,7 @@ def cumplir_interseccion(nuevas_apuestas):
     return True
 
 if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, type="primary"):
-    # 1. Filtrar Universo Base estricto
+    
     universo_valido = []
     for n in range(1, 51):
         if obtener_decena(n) == st.session_state.decena_libre: continue
@@ -247,40 +247,40 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
     apuestas_finales = []
     exito = False
     
-    # El bucle de fuerza constructiva ejecutará hasta 5.000.000 de ciclos cruzados globales
     for ciclo_global in range(5000000):
         apuestas_finales = []
         decenas_restantes = [d for d in TRAMOS_DECENAS.keys() if d != st.session_state.decena_libre]
         
         for num_apuesta in [1, 2, 3, 4]:
-            # Resolver configuración de decenas dobles fijadas por el usuario o aleatorias
+            # SOLUCIÓN DE SELECCIÓN DE DECENAS: Exclusión estricta por lista corregida
             if len(st.session_state.decenas_dobles) == 2:
                 dobles_apuesta = st.session_state.decenas_dobles
             elif len(st.session_state.decenas_dobles) == 1:
-                dobles_apuesta = st.session_state.decenas_dobles + [random.choice([d for d in decenas_restantes if d != st.session_state.decenas_dobles[0]])]
+                # Filtrar correctamente para que no duplique la decena ya guardada
+                opciones_validas = [d for d in decenas_restantes if d not in st.session_state.decenas_dobles]
+                dobles_apuesta = st.session_state.decenas_dobles + [random.choice(opciones_validas)]
             else:
                 dobles_apuesta = random.sample(decenas_restantes, 2)
                 
             simples_apuesta = [d for d in decenas_restantes if d not in dobles_apuesta]
             
-            # Generación constructiva de candidatos orientada a objetivos
             comb_generada = None
-            for intento_interno in range(1000):
+            for intento_interno in range(2000):
                 apuesta = set()
                 
-                # Regla de Recientes obligatoria
+                # Inyectar Recientes
                 n10_req = random.choice(r10_limpio) if r10_limpio else None
                 n15_req = random.sample(r15_limpio, min(len(r15_limpio), 2)) if r15_limpio else []
                 
                 if n10_req: apuesta.add(n10_req)
                 for n in n15_req: apuesta.add(n)
                 
-                # Inyección forzada de Unidad Repetida (Se eligen dos números con esa unidad en las decenas válidas)
+                # Inyectar Unidad Repetida
                 candidatos_u_rep = [n for n in universo_valido if n % 10 == st.session_state.unidad_repetida]
                 if len(candidatos_u_rep) >= 2:
                     apuesta.update(random.sample(candidatos_u_rep, 2))
                 
-                # Inyección forzada de Mellizos si aplica (Apuestas 2 y 4)
+                # Inyectar Mellizos si aplica (Apuestas 2 y 4)
                 if activar_mellizos and num_apuesta in [2, 4]:
                     mellizos_validos = [m for m in MELLIZOS if m in universo_valido]
                     if mellizos_validos:
@@ -303,11 +303,19 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
                 
                 if len(lista_candidata) != 6: continue
                 
-                # Validaciones estructurales y de filtros especiales
+                # VALIDACIÓN CRÍTICA DEL CONTEO POR DECENAS
+                conteos_finales_dec = {d: 0 for d in TRAMOS_DECENAS.keys()}
+                for n in lista_candidata:
+                    conteos_finales_dec[obtener_decena(n)] += 1
+                
+                # El motor rechaza la combinación si no cumple exactamente el patrón geométrico pactado
+                if conteos_finales_dec[st.session_state.decena_libre] != 0: continue
+                if sum(1 for d in dobles_apuesta if conteos_finales_dec[d] == 2) != 2: continue
+                if sum(1 for d in simples_apuesta if conteos_finales_dec[d] == 1) != 2: continue
+                
                 if not validar_paridad(lista_candidata): continue
                 if not validar_unidades(lista_candidata, st.session_state.unidad_repetida, st.session_state.unidades_vetadas): continue
                 
-                # Validar Mellizos exactos
                 cont_m = sum(1 for n in lista_candidata if n in MELLIZOS)
                 if activar_mellizos:
                     if num_apuesta in [2, 4] and cont_m != 1: continue
@@ -315,7 +323,6 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
                 else:
                     if cont_m != 0: continue
                 
-                # Validar Clumps exactos (Apuestas 3 y 4)
                 if activar_clumps:
                     if num_apuesta in [3, 4] and contar_consecutivos(lista_candidata) != 1: continue
                     if num_apuesta in [1, 2] and tiene_consecutivos(lista_candidata): continue
@@ -330,7 +337,6 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
             else:
                 break
                 
-        # Validar la intersección global de un número repetido máximo entre las 4 apuestas
         if len(apuestas_finales) == 4 and cumplir_interseccion(apuestas_finales):
             exito = True
             break
