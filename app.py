@@ -95,7 +95,6 @@ for i in range(5):
         disabled = num in st.session_state.recientes_15
         is_selected = num in st.session_state.recientes_10
         
-        # Si está seleccionado, incluimos una estrella ★ bien visible antes del número
         label = f"★ {num}" if is_selected else str(num)
         if cols[j].button(label, key=f"r10_{num}", disabled=disabled, use_container_width=True):
             if num in st.session_state.recientes_10:
@@ -192,11 +191,7 @@ activar_clumps = c2.radio("Selector Clumps", ["NO", "SÍ"], index=0) == "SÍ"
 
 st.markdown("---")
 
-# --- MOTOR DE GENERACIÓN MATEMÁTICA ---
-def validar_paridad(combinacion):
-    pares = sum(1 for n in combinacion if n % 2 == 0)
-    return pares == 3
-
+# --- NUEVO MOTOR MATEMÁTICO DE CONSTRUCCIÓN DETERMINISTA ---
 def obtener_decena(num):
     if 1 <= num <= 10: return "1-10"
     if 11 <= num <= 20: return "11-20"
@@ -205,28 +200,26 @@ def obtener_decena(num):
     if 41 <= num <= 50: return "41-50"
     return None
 
-def validar_unidades(combinacion, u_repetida, u_vetadas):
-    terminaciones = [n % 10 for n in combinacion]
-    if any(u in u_vetadas for u in terminaciones):
-        return False
-    if terminaciones.count(u_repetida) != 2:
-        return False
-    restantes = [t for t in terminaciones if t != u_repetida]
+def validar_paridad(comb):
+    return sum(1 for n in comb if n % 2 == 0) == 3
+
+def validar_unidades(comb, u_rep, u_vet):
+    terms = [n % 10 for n in comb]
+    if any(u in u_vet for u in terms): return False
+    if terms.count(u_rep) != 2: return False
+    restantes = [t for t in terms if t != u_rep]
     return len(set(restantes)) == len(restantes)
 
-def tiene_consecutivos(combinacion):
-    sorted_comb = sorted(combinacion)
-    for i in range(len(sorted_comb) - 1):
-        if sorted_comb[i+1] - sorted_comb[i] == 1:
-            return True
-    return False
+def tiene_consecutivos(comb):
+    sc = sorted(comb)
+    return any(sc[i+1] - sc[i] == 1 for i in range(len(sc)-1))
 
-def contar_consecutivos(combinacion):
-    sorted_comb = sorted(combinacion)
+def contar_consecutivos(comb):
+    sc = sorted(comb)
     parejas = 0
     i = 0
-    while i < len(sorted_comb) - 1:
-        if sorted_comb[i+1] - sorted_comb[i] == 1:
+    while i < len(sc) - 1:
+        if sc[i+1] - sc[i] == 1:
             parejas += 1
             i += 2
         else:
@@ -236,115 +229,111 @@ def contar_consecutivos(combinacion):
 def cumplir_interseccion(nuevas_apuestas):
     for i in range(len(nuevas_apuestas)):
         for j in range(i + 1, len(nuevas_apuestas)):
-            interseccion = set(nuevas_apuestas[i]) & set(nuevas_apuestas[j])
-            if len(interseccion) > 1:
+            if len(set(nuevas_apuestas[i]) & set(nuevas_apuestas[j])) > 1:
                 return False
     return True
 
-# --- BOTÓN DE GENERACIÓN ---
 if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, type="primary"):
-    
+    # 1. Filtrar Universo Base estricto
     universo_valido = []
     for n in range(1, 51):
-        dec_n = obtener_decena(n)
-        uni_n = n % 10
-        if dec_n == st.session_state.decena_libre: continue
-        if uni_n in st.session_state.unidades_vetadas: continue
+        if obtener_decena(n) == st.session_state.decena_libre: continue
+        if n % 10 in st.session_state.unidades_vetadas: continue
         universo_valido.append(n)
-        
+
     r10_limpio = [n for n in st.session_state.recientes_10 if n in universo_valido]
     r15_limpio = [n for n in st.session_state.recientes_15 if n in universo_valido]
-    resto_universo = [n for n in universo_valido if n not in r10_limpio and n not in r15_limpio]
-    
+
     apuestas_finales = []
-    intentos_globales = 0
     exito = False
     
-    # MOTOR CONFIGURADO A UN MÁXIMO DE 5.000.000 DE INTENTOS
-    while intentos_globales < 5000000 and not exito:
+    # El bucle de fuerza constructiva ejecutará hasta 5.000.000 de ciclos cruzados globales
+    for ciclo_global in range(5000000):
         apuestas_finales = []
         decenas_restantes = [d for d in TRAMOS_DECENAS.keys() if d != st.session_state.decena_libre]
         
         for num_apuesta in [1, 2, 3, 4]:
+            # Resolver configuración de decenas dobles fijadas por el usuario o aleatorias
             if len(st.session_state.decenas_dobles) == 2:
                 dobles_apuesta = st.session_state.decenas_dobles
             elif len(st.session_state.decenas_dobles) == 1:
-                opciones_extra = [d for d in decenas_restantes if d != st.session_state.decenas_dobles]
-                dobles_apuesta = st.session_state.decenas_dobles + [random.choice(opciones_extra)]
+                dobles_apuesta = st.session_state.decenas_dobles + [random.choice([d for d in decenas_restantes if d != st.session_state.decenas_dobles[0]])]
             else:
                 dobles_apuesta = random.sample(decenas_restantes, 2)
                 
             simples_apuesta = [d for d in decenas_restantes if d not in dobles_apuesta]
             
-            apuesta_valida = None
-            # Subimos también las sub-pruebas por apuesta individual
-            for _ in range(5000):
-                apuesta = []
+            # Generación constructiva de candidatos orientada a objetivos
+            comb_generada = None
+            for intento_interno in range(1000):
+                apuesta = set()
                 
-                n10 = random.choice(r10_limpio) if r10_limpio else None
-                n15 = random.sample(r15_limpio, min(len(r15_limpio), 2)) if r15_limpio else []
+                # Regla de Recientes obligatoria
+                n10_req = random.choice(r10_limpio) if r10_limpio else None
+                n15_req = random.sample(r15_limpio, min(len(r15_limpio), 2)) if r15_limpio else []
                 
-                bolsa_llenado = [n for n in resto_universo]
-                random.shuffle(bolsa_llenado)
+                if n10_req: apuesta.add(n10_req)
+                for n in n15_req: apuesta.add(n)
                 
-                comb_candidata = []
-                if n10: comb_candidata.append(n10)
-                comb_candidata.extend(n15)
+                # Inyección forzada de Unidad Repetida (Se eligen dos números con esa unidad en las decenas válidas)
+                candidatos_u_rep = [n for n in universo_valido if n % 10 == st.session_state.unidad_repetida]
+                if len(candidatos_u_rep) >= 2:
+                    apuesta.update(random.sample(candidatos_u_rep, 2))
                 
-                for n in bolsa_llenado:
-                    if len(comb_candidata) >= 6: break
+                # Inyección forzada de Mellizos si aplica (Apuestas 2 y 4)
+                if activar_mellizos and num_apuesta in [2, 4]:
+                    mellizos_validos = [m for m in MELLIZOS if m in universo_valido]
+                    if mellizos_validos:
+                        apuesta.add(random.choice(mellizos_validos))
+                
+                # Completar y filtrar usando la estructura exacta por decenas
+                numeros_restantes = [n for n in universo_valido if n not in apuesta]
+                random.shuffle(numeros_restantes)
+                
+                lista_candidata = list(apuesta)
+                for n in numeros_restantes:
+                    if len(lista_candidata) >= 6: break
                     dec = obtener_decena(n)
-                    actuales_dec = sum(1 for x in comb_candidata if obtener_decena(x) == dec)
+                    conteo_dec = sum(1 for x in lista_candidata if obtener_decena(x) == dec)
                     
-                    if dec in dobles_apuesta and actuales_dec < 2:
-                        comb_candidata.append(n)
-                    elif dec in simples_apuesta and actuales_dec < 1:
-                        comb_candidata.append(n)
+                    if dec in dobles_apuesta and conteo_dec < 2:
+                        lista_candidata.append(n)
+                    elif dec in simples_apuesta and conteo_dec < 1:
+                        lista_candidata.append(n)
                 
-                if len(comb_candidata) < 6: continue
-                comb = comb_candidata[:6]
+                if len(lista_candidata) != 6: continue
                 
-                if not validar_paridad(comb): continue
+                # Validaciones estructurales y de filtros especiales
+                if not validar_paridad(lista_candidata): continue
+                if not validar_unidades(lista_candidata, st.session_state.unidad_repetida, st.session_state.unidades_vetadas): continue
                 
-                conteos_dec = {d: 0 for d in TRAMOS_DECENAS.keys()}
-                for n in comb:
-                    conteos_dec[obtener_decena(n)] += 1
-                
-                if conteos_dec[st.session_state.decena_libre] != 0: continue
-                if sum(1 for d in dobles_apuesta if conteos_dec[d] == 2) != 2: continue
-                if sum(1 for d in simples_apuesta if conteos_dec[d] == 1) != 2: continue
-                
-                if not validar_unidades(comb, st.session_state.unidad_repetida, st.session_state.unidades_vetadas): continue
-                
-                mellizos_en_comb = [n for n in comb if n in MELLIZOS]
+                # Validar Mellizos exactos
+                cont_m = sum(1 for n in lista_candidata if n in MELLIZOS)
                 if activar_mellizos:
-                    if num_apuesta in [2, 4]:
-                        if len(mellizos_en_comb) != 1: continue
-                    else:
-                        if len(mellizos_en_comb) != 0: continue
+                    if num_apuesta in [2, 4] and cont_m != 1: continue
+                    if num_apuesta in [1, 3] and cont_m != 0: continue
                 else:
-                    if len(mellizos_en_comb) != 0: continue
-                    
-                if activar_clumps:
-                    if num_apuesta in [3, 4]:
-                        if contar_consecutivos(comb) != 1: continue
-                    else:
-                        if tiene_consecutivos(comb): continue
-                else:
-                    if tiene_consecutivos(comb): continue
+                    if cont_m != 0: continue
                 
-                apuesta_valida = sorted(comb)
+                # Validar Clumps exactos (Apuestas 3 y 4)
+                if activar_clumps:
+                    if num_apuesta in [3, 4] and contar_consecutivos(lista_candidata) != 1: continue
+                    if num_apuesta in [1, 2] and tiene_consecutivos(lista_candidata): continue
+                else:
+                    if tiene_consecutivos(lista_candidata): continue
+                
+                comb_generada = sorted(lista_candidata)
                 break
-            
-            if apuesta_valida:
-                apuestas_finales.append(apuesta_valida)
+                
+            if comb_generada:
+                apuestas_finales.append(comb_generada)
             else:
                 break
                 
+        # Validar la intersección global de un número repetido máximo entre las 4 apuestas
         if len(apuestas_finales) == 4 and cumplir_interseccion(apuestas_finales):
             exito = True
             break
-        intentos_globales += 1
 
     # --- RENDERIZADO DE RESULTADOS ---
     if exito:
