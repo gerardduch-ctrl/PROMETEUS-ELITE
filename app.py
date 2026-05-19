@@ -76,22 +76,24 @@ TRAMOS_DECENAS = {
 }
 MELLIZOS = [11, 22, 33, 44]
 
-# --- BLOQUE 1: PARRILLAS RECIENTES (INTERFAZ COMPACTA) ---
-st.subheader("📊 Entrada de Resultados Recientes")
-
-# Inicializar estados de selección si no existen
+# --- INICIALIZACIÓN DE ESTADOS (ESTÁTICOS Y DESPLEGADOS) ---
 if "recientes_10" not in st.session_state: st.session_state.recientes_10 = []
 if "recientes_15" not in st.session_state: st.session_state.recientes_15 = []
+if "decena_libre" not in st.session_state: st.session_state.decena_libre = "1-10"
+if "decenas_dobles" not in st.session_state: st.session_state.decenas_dobles = []
+if "unidad_repetida" not in st.session_state: st.session_state.unidad_repetida = 4
+if "unidades_vetadas" not in st.session_state: st.session_state.unidades_vetadas = []
+
+# --- BLOQUE 1: PARRILLAS RECIENTES ---
+st.subheader("📊 Entrada de Resultados Recientes")
 
 st.markdown("**Parrilla Recientes 10** (Máx. 10 números - 1 por apuesta)")
-# Dibujar matriz de 5x10 para interacción ágil en móviles
 for i in range(5):
     cols = st.columns(10)
     for j in range(10):
         num = i * 10 + j + 1
         disabled = num in st.session_state.recientes_15
         is_selected = num in st.session_state.recientes_10
-        
         label = f"**{num}**" if is_selected else str(num)
         if cols[j].button(label, key=f"r10_{num}", disabled=disabled, use_container_width=True):
             if num in st.session_state.recientes_10:
@@ -99,7 +101,6 @@ for i in range(5):
             elif len(st.session_state.recientes_10) < 10:
                 st.session_state.recientes_10.append(num)
             st.rerun()
-
 st.caption(f"Seleccionados Recientes 10 ({len(st.session_state.recientes_10)}/10): {sorted(st.session_state.recientes_10)}")
 
 st.markdown("**Parrilla Recientes 15** (Máx. 15 números - 2 por apuesta)")
@@ -109,7 +110,6 @@ for i in range(5):
         num = i * 10 + j + 1
         disabled = num in st.session_state.recientes_10
         is_selected = num in st.session_state.recientes_15
-        
         label = f"**{num}**" if is_selected else str(num)
         if cols[j].button(label, key=f"r15_{num}", disabled=disabled, use_container_width=True):
             if num in st.session_state.recientes_15:
@@ -117,26 +117,70 @@ for i in range(5):
             elif len(st.session_state.recientes_15) < 15:
                 st.session_state.recientes_15.append(num)
             st.rerun()
-
 st.caption(f"Seleccionados Recientes 15 ({len(st.session_state.recientes_15)}/15): {sorted(st.session_state.recientes_15)}")
 
 st.markdown("---")
 
-# --- BLOQUE 2: CONTROL DE DECENAS ---
+# --- BLOQUE 2: CONTROL DE DECENAS DESPLEGADO ---
 st.subheader("🔢 Parámetros de Decenas")
-decena_libre = st.radio("Selector Decena Libre (Exclusión Total)", list(TRAMOS_DECENAS.keys()), index=0)
 
-decenas_dobles_disponibles = [d for d in TRAMOS_DECENAS.keys() if d != decena_libre]
-decenas_dobles_previa = st.multiselect("Selector Decenas Dobles (Máx. 2)", decenas_dobles_disponibles, max_selections=2)
+st.markdown("**Selector Decena Libre** (Opción única - Exclusión Total)")
+cols_dl = st.columns(5)
+for idx, dec in enumerate(TRAMOS_DECENAS.keys()):
+    is_libre = st.session_state.decena_libre == dec
+    label = f"🚫 {dec}" if is_libre else dec
+    if cols_dl[idx].button(label, key=f"dl_{dec}", use_container_width=True):
+        st.session_state.decena_libre = dec
+        # Forzar que no sea doble si se selecciona como libre
+        if dec in st.session_state.decenas_dobles:
+            st.session_state.decenas_dobles.remove(dec)
+        st.rerun()
+
+st.markdown("**Selector Decenas Dobles** (Máx. 2 tramos)")
+cols_dd = st.columns(5)
+for idx, dec in enumerate(TRAMOS_DECENAS.keys()):
+    # Deshabilitar si ya es la decena libre
+    disabled = dec == st.session_state.decena_libre
+    is_doble = dec in st.session_state.decenas_dobles
+    label = f"⭐ {dec}" if is_doble else dec
+    if cols_dd[idx].button(label, key=f"dd_{dec}", disabled=disabled, use_container_width=True):
+        if dec in st.session_state.decenas_dobles:
+            st.session_state.decenas_dobles.remove(dec)
+        elif len(st.session_state.decenas_dobles) < 2:
+            st.session_state.decenas_dobles.append(dec)
+        st.rerun()
+st.caption(f"Decenas Dobles fijadas ({len(st.session_state.decenas_dobles)}/2): {st.session_state.decenas_dobles}")
 
 st.markdown("---")
 
-# --- BLOQUE 3: CONTROL DE UNIDADES ---
+# --- BLOQUE 3: CONTROL DE UNIDADES DESPLEGADO ---
 st.subheader("🎯 Parámetros de Unidades (Terminaciones)")
-unidad_repetida = st.selectbox("Selector Unidad Repetida (Obligatoria)", list(range(10)), index=4)
 
-unidades_restantes = [u for u in range(10) if u != unidad_repetida]
-unidades_vetadas = st.multiselect("Selector Unidad Vetada (Máx. 2)", unidades_restantes, max_selections=2)
+st.markdown("**Selector Unidad Repetida** (Opción única - Obligatoria)")
+cols_ur = st.columns(10)
+for u in range(10):
+    is_rep = st.session_state.offset_unidad_rep if "offset_unidad_rep" in locals() else st.session_state.unidad_repetida == u
+    label = f"✨ {u}" if is_rep else str(u)
+    if cols_ur[u].button(label, key=f"ur_{u}", use_container_width=True):
+        st.session_state.unidad_repetida = u
+        # Eliminar de vetadas si coincide
+        if u in st.session_state.unidades_vetadas:
+            st.session_state.unidades_vetadas.remove(u)
+        st.rerun()
+
+st.markdown("**Selector Unidad Vetada** (Máx. 2 unidades)")
+cols_uv = st.columns(10)
+for u in range(10):
+    disabled = u == st.session_state.unidad_repetida
+    is_vetada = u in st.session_state.unidades_vetadas
+    label = f"❌ {u}" if is_vetada else str(u)
+    if cols_uv[u].button(label, key=f"uv_{u}", disabled=disabled, use_container_width=True):
+        if u in st.session_state.unidades_vetadas:
+            st.session_state.unidades_vetadas.remove(u)
+        elif len(st.session_state.unidades_vetadas) < 2:
+            st.session_state.unidades_vetadas.append(u)
+        st.rerun()
+st.caption(f"Unidades Vetadas ({len(st.session_state.unidades_vetadas)}/2): {st.session_state.unidades_vetadas}")
 
 st.markdown("---")
 
@@ -197,15 +241,15 @@ def cumplir_interseccion(nuevas_apuestas):
                 return False
     return True
 
-# --- BOTÓN DE GENERACIÓN Y CONTROL ---
+# --- BOTÓN DE GENERACIÓN ---
 if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, type="primary"):
     
     universo_valido = []
     for n in range(1, 51):
         dec_n = obtener_decena(n)
         uni_n = n % 10
-        if dec_n == decena_libre: continue
-        if uni_n in unidades_vetadas: continue
+        if dec_n == st.session_state.decena_libre: continue
+        if uni_n in st.session_state.unidades_vetadas: continue
         universo_valido.append(n)
         
     r10_limpio = [n for n in st.session_state.recientes_10 if n in universo_valido]
@@ -218,14 +262,14 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
     
     while intentos_globales < 8000 and not exito:
         apuestas_finales = []
-        decenas_restantes = [d for d in TRAMOS_DECENAS.keys() if d != decena_libre]
+        decenas_restantes = [d for d in TRAMOS_DECENAS.keys() if d != st.session_state.decena_libre]
         
         for num_apuesta in [1, 2, 3, 4]:
-            if len(decenas_dobles_previa) == 2:
-                dobles_apuesta = decenas_dobles_previa
-            elif len(decenas_dobles_previa) == 1:
-                opciones_extra = [d for d in decenas_restantes if d != decenas_dobles_previa[0]]
-                dobles_apuesta = decenas_dobles_previa + [random.choice(opciones_extra)]
+            if len(st.session_state.decenas_dobles) == 2:
+                dobles_apuesta = st.session_state.decenas_dobles
+            elif len(st.session_state.decenas_dobles) == 1:
+                opciones_extra = [d for d in decenas_restantes if d != st.session_state.decenas_dobles]
+                dobles_apuesta = st.session_state.decenas_dobles + [random.choice(opciones_extra)]
             else:
                 dobles_apuesta = random.sample(decenas_restantes, 2)
                 
@@ -235,11 +279,9 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
             for _ in range(3000):
                 apuesta = []
                 
-                # Forzar inyección de Recientes requeridos por apuesta
                 n10 = random.choice(r10_limpio) if r10_limpio else None
                 n15 = random.sample(r15_limpio, min(len(r15_limpio), 2)) if r15_limpio else []
                 
-                # Crear bolsa específica filtrada para rellenar
                 bolsa_llenado = [n for n in resto_universo]
                 random.shuffle(bolsa_llenado)
                 
@@ -247,7 +289,6 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
                 if n10: comb_candidata.append(n10)
                 comb_candidata.extend(n15)
                 
-                # Completar dinámicamente respetando el patrón estructural de decenas
                 for n in bolsa_llenado:
                     if len(comb_candidata) >= 6: break
                     dec = obtener_decena(n)
@@ -261,22 +302,18 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
                 if len(comb_candidata) < 6: continue
                 comb = comb_candidata[:6]
                 
-                # FILTRO: Paridad
                 if not validar_paridad(comb): continue
                 
-                # FILTRO: Estructura de Decenas Estricta
                 conteos_dec = {d: 0 for d in TRAMOS_DECENAS.keys()}
                 for n in comb:
                     conteos_dec[obtener_decena(n)] += 1
                 
-                if conteos_dec[decena_libre] != 0: continue
+                if conteos_dec[st.session_state.decena_libre] != 0: continue
                 if sum(1 for d in dobles_apuesta if conteos_dec[d] == 2) != 2: continue
                 if sum(1 for d in simples_apuesta if conteos_dec[d] == 1) != 2: continue
                 
-                # FILTRO: Unidades
-                if not validar_unidades(comb, unidad_repetida, unidades_vetadas): continue
+                if not validar_unidades(comb, st.session_state.unidad_repetida, st.session_state.unidades_vetadas): continue
                 
-                # FILTRO: Mellizos (Apuestas 2 y 4)
                 mellizos_en_comb = [n for n in comb if n in MELLIZOS]
                 if activar_mellizos:
                     if num_apuesta in [2, 4]:
@@ -286,7 +323,6 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
                 else:
                     if len(mellizos_en_comb) != 0: continue
                     
-                # FILTRO: Clumps (Apuestas 3 y 4)
                 if activar_clumps:
                     if num_apuesta in [3, 4]:
                         if contar_consecutivos(comb) != 1: continue
@@ -310,7 +346,7 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
 
     # --- RENDERIZADO DE RESULTADOS ---
     if exito:
-        st.success("🎯 Combinaciones generadas con éxito respetando todos los parámetros:")
+        st.success("🎯 Combinaciones generadas con éxito:")
         for idx, ap in enumerate(apuestas_finales, 1):
             clump_tag = " 🔸 [Clump]" if idx in [3, 4] and activar_clumps else ""
             mellizo_tag = " 🔹 [Mellizo]" if idx in [2, 4] and activar_mellizos else ""
@@ -322,4 +358,4 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.error("❌ Conflicto de filtros extremos. Ajusta las parrillas manuales o reduce las unidades vetadas e intenta de nuevo.")
+        st.error("❌ Configuración imposible. Relaje algún filtro o veto para generar las apuestas.")
