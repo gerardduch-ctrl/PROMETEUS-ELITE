@@ -57,7 +57,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-title">PROMETEUS ELITE</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">PROMETEUS ELITE ULTRA</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">PROMETEUS ELITE ULTRA 6/50</div>', unsafe_allow_html=True)
 
 TRAMOS_DECENAS = {
     "1-10": list(range(1, 11)),
