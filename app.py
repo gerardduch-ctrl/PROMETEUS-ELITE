@@ -1,14 +1,14 @@
 import streamlit as st
 import random
 
-# Configuración de página optimizada para móvil (Layout centrado y compacto)
+# Configuración de página optimizada para móvil
 st.set_page_config(
     page_title="PROMETEUS ELITE",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS personalizados para una interfaz minimalista y funcional en Android
+# Estilos CSS avanzados para garantizar visualización perfecta en móviles Android
 st.markdown("""
     <style>
     /* Ocultar elementos innecesarios de Streamlit */
@@ -16,7 +16,7 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* Estilo del título principal */
+    /* Título y subtítulos */
     .main-title {
         font-family: 'Helvetica Neue', Arial, sans-serif;
         color: #FFFFFF;
@@ -33,7 +33,25 @@ st.markdown("""
         margin-bottom: 30px;
     }
     
-    /* Estilo de los contenedores de apuestas (Tarjetas) */
+    /* Botones Numéricos de las Parrillas (Estilo Personalizado Infallible) */
+    .stButton > button {
+        border-radius: 6px !important;
+        padding: 4px 0px !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+        height: 38px !important;
+        transition: all 0.2s ease;
+    }
+    
+    /* Forzar estilos visuales extremos para SELECCIONADOS en los botones de Streamlit */
+    div.st_seleccionado > div > button {
+        background-color: #00E676 !important;
+        color: #000000 !important;
+        border: 2px solid #FFFFFF !important;
+        box-shadow: 0px 0px 10px #00E676 !important;
+    }
+    
+    /* Tarjetas de resultados */
     .apuesta-card {
         background-color: #1E1E1E;
         padding: 15px;
@@ -55,9 +73,9 @@ st.markdown("""
         letter-spacing: 4px;
     }
     
-    /* Ajustes para que las cuadrículas se adapten bien al ancho del móvil */
+    /* Optimización de rejillas horizontales en pantallas estrechas */
     div[data-testid="stHorizontalBlock"] {
-        gap: 4px !important;
+        gap: 3px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -66,7 +84,6 @@ st.markdown("""
 st.markdown('<div class="main-title">PROMETEUS ELITE</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">SISTEMA DE CRIBA MULTIPLE PARA EUROMILLONES</div>', unsafe_allow_html=True)
 
-# Definición de tramos de decenas fijos
 TRAMOS_DECENAS = {
     "1-10": list(range(1, 11)),
     "11-20": list(range(11, 21)),
@@ -76,7 +93,7 @@ TRAMOS_DECENAS = {
 }
 MELLIZOS = [11, 22, 33, 44]
 
-# --- INICIALIZACIÓN DE ESTADOS (ESTÁTICOS Y DESPLEGADOS) ---
+# --- INICIALIZACIÓN DE ESTADOS ---
 if "recientes_10" not in st.session_state: st.session_state.recientes_10 = []
 if "recientes_15" not in st.session_state: st.session_state.recientes_15 = []
 if "decena_libre" not in st.session_state: st.session_state.decena_libre = "1-10"
@@ -84,103 +101,131 @@ if "decenas_dobles" not in st.session_state: st.session_state.decenas_dobles = [
 if "unidad_repetida" not in st.session_state: st.session_state.unidad_repetida = 4
 if "unidades_vetadas" not in st.session_state: st.session_state.unidades_vetadas = []
 
-# --- BLOQUE 1: PARRILLAS RECIENTES ---
+# --- BLOQUE 1: PARRILLAS RECIENTES REFORZADAS ---
 st.subheader("📊 Entrada de Resultados Recientes")
 
-st.markdown("**Parrilla Recientes 10** (Máx. 10 números - 1 por apuesta)")
+st.markdown(f"**Parrilla Recientes 10** (Seleccionados: {len(st.session_state.recientes_10)}/10)")
 for i in range(5):
     cols = st.columns(10)
     for j in range(10):
         num = i * 10 + j + 1
         disabled = num in st.session_state.recientes_15
         is_selected = num in st.session_state.recientes_10
-        label = f"**{num}**" if is_selected else str(num)
-        if cols[j].button(label, key=f"r10_{num}", disabled=disabled, use_container_width=True):
-            if num in st.session_state.recientes_10:
-                st.session_state.recientes_10.remove(num)
-            elif len(st.session_state.recientes_10) < 10:
-                st.session_state.recientes_10.append(num)
-            st.rerun()
-st.caption(f"Seleccionados Recientes 10 ({len(st.session_state.recientes_10)}/10): {sorted(st.session_state.recientes_10)}")
+        
+        # Aplicamos un contenedor div especial si está seleccionado para forzar el CSS verde
+        if is_selected:
+            with cols[j]:
+                st.markdown('<div class="st_seleccionado">', unsafe_allow_html=True)
+                if st.button(f"{num}", key=f"r10_{num}", disabled=disabled, use_container_width=True):
+                    st.session_state.recientes_10.remove(num)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            if cols[j].button(f"{num}", key=f"r10_{num}", disabled=disabled, use_container_width=True):
+                if len(st.session_state.recientes_10) < 10:
+                    st.session_state.recientes_10.append(num)
+                    st.rerun()
 
-st.markdown("**Parrilla Recientes 15** (Máx. 15 números - 2 por apuesta)")
+st.markdown(f"**Parrilla Recientes 15** (Seleccionados: {len(st.session_state.recientes_15)}/15)")
 for i in range(5):
     cols = st.columns(10)
     for j in range(10):
         num = i * 10 + j + 1
         disabled = num in st.session_state.recientes_10
         is_selected = num in st.session_state.recientes_15
-        label = f"**{num}**" if is_selected else str(num)
-        if cols[j].button(label, key=f"r15_{num}", disabled=disabled, use_container_width=True):
-            if num in st.session_state.recientes_15:
-                st.session_state.recientes_15.remove(num)
-            elif len(st.session_state.recientes_15) < 15:
-                st.session_state.recientes_15.append(num)
-            st.rerun()
-st.caption(f"Seleccionados Recientes 15 ({len(st.session_state.recientes_15)}/15): {sorted(st.session_state.recientes_15)}")
+        
+        if is_selected:
+            with cols[j]:
+                st.markdown('<div class="st_seleccionado">', unsafe_allow_html=True)
+                if st.button(f"{num}", key=f"r15_{num}", disabled=disabled, use_container_width=True):
+                    st.session_state.recientes_15.remove(num)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            if cols[j].button(f"{num}", key=f"r15_{num}", disabled=disabled, use_container_width=True):
+                if len(st.session_state.recientes_15) < 15:
+                    st.session_state.recientes_15.append(num)
+                    st.rerun()
 
 st.markdown("---")
 
-# --- BLOQUE 2: CONTROL DE DECENAS DESPLEGADO ---
+# --- BLOQUE 2: CONTROL DE DECENAS ---
 st.subheader("🔢 Parámetros de Decenas")
 
-st.markdown("**Selector Decena Libre** (Opción única - Exclusión Total)")
+st.markdown("**Selector Decena Libre** (Opción única)")
 cols_dl = st.columns(5)
 for idx, dec in enumerate(TRAMOS_DECENAS.keys()):
     is_libre = st.session_state.decena_libre == dec
-    label = f"🚫 {dec}" if is_libre else dec
-    if cols_dl[idx].button(label, key=f"dl_{dec}", use_container_width=True):
-        st.session_state.decena_libre = dec
-        # Forzar que no sea doble si se selecciona como libre
-        if dec in st.session_state.decenas_dobles:
-            st.session_state.decenas_dobles.remove(dec)
-        st.rerun()
+    if is_libre:
+        with cols_dl[idx]:
+            st.markdown('<div class="st_seleccionado">', unsafe_allow_html=True)
+            st.button(f"🚫 {dec}", key=f"dl_{dec}", use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        if cols_dl[idx].button(dec, key=f"dl_{dec}", use_container_width=True):
+            st.session_state.decena_libre = dec
+            if dec in st.session_state.decenas_dobles:
+                st.session_state.decenas_dobles.remove(dec)
+            st.rerun()
 
 st.markdown("**Selector Decenas Dobles** (Máx. 2 tramos)")
 cols_dd = st.columns(5)
 for idx, dec in enumerate(TRAMOS_DECENAS.keys()):
-    # Deshabilitar si ya es la decena libre
     disabled = dec == st.session_state.decena_libre
     is_doble = dec in st.session_state.decenas_dobles
-    label = f"⭐ {dec}" if is_doble else dec
-    if cols_dd[idx].button(label, key=f"dd_{dec}", disabled=disabled, use_container_width=True):
-        if dec in st.session_state.decenas_dobles:
-            st.session_state.decenas_dobles.remove(dec)
-        elif len(st.session_state.decenas_dobles) < 2:
-            st.session_state.decenas_dobles.append(dec)
-        st.rerun()
-st.caption(f"Decenas Dobles fijadas ({len(st.session_state.decenas_dobles)}/2): {st.session_state.decenas_dobles}")
+    
+    if is_doble:
+        with cols_dd[idx]:
+            st.markdown('<div class="st_seleccionado">', unsafe_allow_html=True)
+            if st.button(f"⭐ {dec}", key=f"dd_{dec}", disabled=disabled, use_container_width=True):
+                st.session_state.decenas_dobles.remove(dec)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        if cols_dd[idx].button(dec, key=f"dd_{dec}", disabled=disabled, use_container_width=True):
+            if len(st.session_state.decenas_dobles) < 2:
+                st.session_state.decenas_dobles.append(dec)
+                st.rerun()
 
 st.markdown("---")
 
-# --- BLOQUE 3: CONTROL DE UNIDADES DESPLEGADO ---
+# --- BLOQUE 3: CONTROL DE UNIDADES ---
 st.subheader("🎯 Parámetros de Unidades (Terminaciones)")
 
-st.markdown("**Selector Unidad Repetida** (Opción única - Obligatoria)")
+st.markdown("**Selector Unidad Repetida** (Opción única)")
 cols_ur = st.columns(10)
 for u in range(10):
-    is_rep = st.session_state.offset_unidad_rep if "offset_unidad_rep" in locals() else st.session_state.unidad_repetida == u
-    label = f"✨ {u}" if is_rep else str(u)
-    if cols_ur[u].button(label, key=f"ur_{u}", use_container_width=True):
-        st.session_state.unidad_repetida = u
-        # Eliminar de vetadas si coincide
-        if u in st.session_state.unidades_vetadas:
-            st.session_state.unidades_vetadas.remove(u)
-        st.rerun()
+    is_rep = st.session_state.unidad_repetida == u
+    if is_rep:
+        with cols_ur[u]:
+            st.markdown('<div class="st_seleccionado">', unsafe_allow_html=True)
+            st.button(f"✨ {u}", key=f"ur_{u}", use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        if cols_ur[u].button(str(u), key=f"ur_{u}", use_container_width=True):
+            st.session_state.unidad_repetida = u
+            if u in st.session_state.unidades_vetadas:
+                st.session_state.unidades_vetadas.remove(u)
+            st.rerun()
 
 st.markdown("**Selector Unidad Vetada** (Máx. 2 unidades)")
 cols_uv = st.columns(10)
 for u in range(10):
     disabled = u == st.session_state.unidad_repetida
     is_vetada = u in st.session_state.unidades_vetadas
-    label = f"❌ {u}" if is_vetada else str(u)
-    if cols_uv[u].button(label, key=f"uv_{u}", disabled=disabled, use_container_width=True):
-        if u in st.session_state.unidades_vetadas:
-            st.session_state.unidades_vetadas.remove(u)
-        elif len(st.session_state.unidades_vetadas) < 2:
-            st.session_state.unidades_vetadas.append(u)
-        st.rerun()
-st.caption(f"Unidades Vetadas ({len(st.session_state.unidades_vetadas)}/2): {st.session_state.unidades_vetadas}")
+    
+    if is_vetada:
+        with cols_uv[u]:
+            st.markdown('<div class="st_seleccionado">', unsafe_allow_html=True)
+            if st.button(f"❌ {u}", key=f"uv_{u}", disabled=disabled, use_container_width=True):
+                st.session_state.unidades_vetadas.remove(u)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        if cols_uv[u].button(str(u), key=f"uv_{u}", disabled=disabled, use_container_width=True):
+            if len(st.session_state.unidades_vetadas) < 2:
+                st.session_state.unidades_vetadas.append(u)
+                st.rerun()
 
 st.markdown("---")
 
@@ -344,7 +389,7 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
             break
         intentos_globales += 1
 
-    # --- RENDERIZADO DE RESULTADOS ---
+# --- RENDERIZADO DE RESULTADOS ---
     if exito:
         st.success("🎯 Combinaciones generadas con éxito:")
         for idx, ap in enumerate(apuestas_finales, 1):
