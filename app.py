@@ -8,7 +8,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS avanzados para garantizar visualización perfecta en móviles Android
+# Estilos CSS radicales para garantizar visualización perfecta en móviles Android
 st.markdown("""
     <style>
     /* Ocultar elementos innecesarios de Streamlit */
@@ -33,22 +33,30 @@ st.markdown("""
         margin-bottom: 30px;
     }
     
-    /* Botones Numéricos de las Parrillas (Estilo Personalizado Infallible) */
+    /* Botones Numéricos de las Parrillas por defecto */
     .stButton > button {
         border-radius: 6px !important;
         padding: 4px 0px !important;
         font-size: 14px !important;
         font-weight: bold !important;
         height: 38px !important;
-        transition: all 0.2s ease;
+        background-color: #262626 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #444444 !important;
     }
     
-    /* Forzar estilos visuales extremos para SELECCIONADOS en los botones de Streamlit */
-    div.st_seleccionado > div > button {
-        background-color: #00E676 !important;
-        color: #000000 !important;
-        border: 2px solid #FFFFFF !important;
-        box-shadow: 0px 0px 10px #00E676 !important;
+    /* FORZAR COLOR ROJO RADICAL PARA ELEMENTOS SELECCIONADOS */
+    div.st_seleccionado button {
+        background-color: #FF1744 !important; /* Rojo Intenso */
+        color: #FFFFFF !important;            /* Texto Blanco */
+        border: 2px solid #FFFFFF !important;  /* Borde Blanco */
+        box-shadow: 0px 0px 12px #FF1744 !important; /* Resplandor Rojo */
+    }
+    
+    /* Forzar que el texto interno del botón seleccionado también sea blanco en móvil */
+    div.st_seleccionado button p {
+        color: #FFFFFF !important;
+        font-weight: 900 !important;
     }
     
     /* Tarjetas de resultados */
@@ -57,7 +65,7 @@ st.markdown("""
         padding: 15px;
         border-radius: 10px;
         margin-bottom: 12px;
-        border-left: 5px solid #00E676;
+        border-left: 5px solid #FF1744;
         box-shadow: 0px 4px 6px rgba(0,0,0,0.3);
     }
     .apuesta-titulo {
@@ -73,7 +81,7 @@ st.markdown("""
         letter-spacing: 4px;
     }
     
-    /* Optimización de rejillas horizontales en pantallas estrechas */
+    /* Optimización de rejillas horizontales en móviles */
     div[data-testid="stHorizontalBlock"] {
         gap: 3px !important;
     }
@@ -101,7 +109,7 @@ if "decenas_dobles" not in st.session_state: st.session_state.decenas_dobles = [
 if "unidad_repetida" not in st.session_state: st.session_state.unidad_repetida = 4
 if "unidades_vetadas" not in st.session_state: st.session_state.unidades_vetadas = []
 
-# --- BLOQUE 1: PARRILLAS RECIENTES REFORZADAS ---
+# --- BLOQUE 1: PARRILLAS RECIENTES ---
 st.subheader("📊 Entrada de Resultados Recientes")
 
 st.markdown(f"**Parrilla Recientes 10** (Seleccionados: {len(st.session_state.recientes_10)}/10)")
@@ -112,7 +120,6 @@ for i in range(5):
         disabled = num in st.session_state.recientes_15
         is_selected = num in st.session_state.recientes_10
         
-        # Aplicamos un contenedor div especial si está seleccionado para forzar el CSS verde
         if is_selected:
             with cols[j]:
                 st.markdown('<div class="st_seleccionado">', unsafe_allow_html=True)
@@ -389,7 +396,7 @@ if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, ty
             break
         intentos_globales += 1
 
-# --- RENDERIZADO DE RESULTADOS ---
+    # --- RENDERIZADO DE RESULTADOS ---
     if exito:
         st.success("🎯 Combinaciones generadas con éxito:")
         for idx, ap in enumerate(apuestas_finales, 1):
