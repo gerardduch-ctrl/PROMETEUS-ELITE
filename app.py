@@ -1,15 +1,16 @@
 import streamlit as st
 import random
-import itertools
 
-# Configuración de página optimizada para móvil
+# ==========================================
+# CONFIGURACIÓN DE PÁGINA ULTRA-MINIMALISTA
+# ==========================================
 st.set_page_config(
     page_title="PROMETEUS ELITE",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Estilos CSS Limpios y Minimalistas
+# Estilos CSS de Alta Densidad Visual para Móvil
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -20,38 +21,55 @@ st.markdown("""
         color: #FFFFFF;
         text-align: center;
         font-weight: 800;
-        font-size: 32px;
+        font-size: 30px;
         letter-spacing: 2px;
+        margin-top: 10px;
         margin-bottom: 2px;
     }
     .subtitle {
         text-align: center;
-        color: #888888;
+        color: #00E676;
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        margin-bottom: 25px;
+    }
+    .seccion-titulo {
         font-size: 14px;
-        margin-bottom: 30px;
+        font-weight: bold;
+        color: #FFFFFF;
+        background-color: #262626;
+        padding: 6px 12px;
+        border-radius: 5px;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
     }
     .apuesta-card {
         background-color: #1E1E1E;
         padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
         border-left: 5px solid #00E676;
-        box-shadow: 0px 4px 6px rgba(0,0,0,0.3);
     }
     .apuesta-titulo {
-        font-size: 14px;
+        font-size: 12px;
         color: #888888;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
         font-weight: bold;
     }
     .apuesta-numeros {
         font-size: 24px;
         font-weight: bold;
         color: #FFFFFF;
-        letter-spacing: 4px;
+        letter-spacing: 3px;
     }
     div[data-testid="stHorizontalBlock"] {
         gap: 4px !important;
+    }
+    .stButton>button {
+        padding: 4px 2px !important;
+        font-size: 12px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -59,274 +77,242 @@ st.markdown("""
 st.markdown('<div class="main-title">PROMETEUS ELITE</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">PROMETEUS ELITE ULTRA 6/50</div>', unsafe_allow_html=True)
 
-TRAMOS_DECENAS = {
+# Tramos de decenas fijos
+TRAMOS = {
     "1-10": list(range(1, 11)),
     "11-20": list(range(11, 21)),
     "21-30": list(range(21, 31)),
     "31-40": list(range(31, 41)),
     "41-50": list(range(41, 51))
 }
-MELLIZOS = [11, 22, 33, 44]
+MELLIZOS_LIST = [11, 22, 33, 44]
 
-if "recientes_10" not in st.session_state: st.session_state.recientes_10 = []
-if "recientes_15" not in st.session_state: st.session_state.recientes_15 = []
-if "decena_libre" not in st.session_state: st.session_state.decena_libre = "1-10"
-if "decenas_dobles" not in st.session_state: st.session_state.decenas_dobles = []
-if "unidad_repetida" not in st.session_state: st.session_state.unidad_repetida = 4
-if "unidades_vetadas" not in st.session_state: st.session_state.unidades_vetadas = []
+# Inicialización del Session State
+if "r10" not in st.session_state: st.session_state.r10 = []
+if "r15" not in st.session_state: st.session_state.r15 = []
+if "vetadas" not in st.session_state: st.session_state.vetadas = []
+if "dobles" not in st.session_state: st.session_state.dobles = []
 
-# --- PARRILLAS RECIENTES ---
-st.subheader("📊 Entrada de Resultados Recientes")
-st.markdown("**Parrilla Recientes 10** (Máx. 10 números - 1 por apuesta)")
+# ==========================================
+# BLOQUE 1: PARRILLAS DE NÚMEROS RECIENTES
+# ==========================================
+st.markdown('<div class="seccion-titulo">📊 Listas de Control Recientes</div>', unsafe_allow_html=True)
+
+# Parrilla Recientes 10
+st.markdown(f"**Parrilla Recientes 10** ({len(st.session_state.r10)}/10 seleccionados - Mínimo 4)")
 for i in range(5):
     cols = st.columns(10)
     for j in range(10):
         num = i * 10 + j + 1
-        disabled = num in st.session_state.recientes_15
-        is_selected = num in st.session_state.recientes_10
+        is_selected = num in st.session_state.r10
+        disabled = num in st.session_state.r15
         label = f"★ {num}" if is_selected else str(num)
-        if cols[j].button(label, key=f"r10_{num}", disabled=disabled, use_container_width=True):
-            if num in st.session_state.recientes_10: st.session_state.recientes_10.remove(num)
-            elif len(st.session_state.recientes_10) < 10: st.session_state.recientes_10.append(num)
+        if cols[j].button(label, key=f"btn_r10_{num}", disabled=disabled, use_container_width=True):
+            if is_selected:
+                st.session_state.r10.remove(num)
+            elif len(st.session_state.r10) < 10:
+                st.session_state.r10.append(num)
             st.rerun()
 
-st.markdown("**Parrilla Recientes 15** (Máx. 15 números - 2 por apuesta)")
+# Parrilla Recientes 15
+st.markdown(f"**Parrilla Recientes 15** ({len(st.session_state.r15)}/15 seleccionados - Mínimo 8)")
 for i in range(5):
     cols = st.columns(10)
     for j in range(10):
         num = i * 10 + j + 1
-        disabled = num in st.session_state.recientes_10
-        is_selected = num in st.session_state.recientes_15
+        is_selected = num in st.session_state.r15
+        disabled = num in st.session_state.r10
         label = f"★ {num}" if is_selected else str(num)
-        if cols[j].button(label, key=f"r15_{num}", disabled=disabled, use_container_width=True):
-            if num in st.session_state.recientes_15: st.session_state.recientes_15.remove(num)
-            elif len(st.session_state.recientes_15) < 15: st.session_state.recientes_15.append(num)
+        if cols[j].button(label, key=f"btn_r15_{num}", disabled=disabled, use_container_width=True):
+            if is_selected:
+                st.session_state.r15.remove(num)
+            elif len(st.session_state.r15) < 15:
+                st.session_state.r15.append(num)
             st.rerun()
 
-st.markdown("---")
+# ==========================================
+# BLOQUE 2: SELECTORES DE DECENAS
+# ==========================================
+st.markdown('<div class="seccion-titulo">🔢 Configuración de Decenas</div>', unsafe_allow_html=True)
 
-# --- CONTROL DE DECENAS ---
-st.subheader("🔢 Parámetros de Decenas")
-st.markdown("**Selector Decena Libre** (Opción única)")
-cols_dl = st.columns(5)
-for idx, dec in enumerate(TRAMOS_DECENAS.keys()):
-    is_libre = st.session_state.decena_libre == dec
-    label = f"★ 🚫 {dec}" if is_libre else dec
-    if cols_dl[idx].button(label, key=f"dl_{dec}", use_container_width=True):
-        st.session_state.decena_libre = dec
-        if dec in st.session_state.decenas_dobles: st.session_state.decenas_dobles.remove(dec)
+decena_libre = st.selectbox("Selector Decena Libre (Tendrá 0 números)", list(TRAMOS.keys()))
+
+st.write("Selector Decenas Dobles (Tendrán 2 números cada una - Máx. 2)")
+cols_dec = st.columns(5)
+opciones_decenas = [k for k in TRAMOS.keys() if k != decena_libre]
+for idx, dec in enumerate(opciones_decenas):
+    is_doble = dec in st.session_state.dobles
+    if cols_dec[idx].button(f" Doble {dec}" if is_doble else dec, key=f"doble_{dec}", use_container_width=True):
+        if is_doble:
+            st.session_state.dobles.remove(dec)
+        elif len(st.session_state.dobles) < 2:
+            st.session_state.dobles.append(dec)
         st.rerun()
 
-st.markdown("**Selector Decenas Dobles** (Máx. 2 tramos)")
-cols_dd = st.columns(5)
-for idx, dec in enumerate(TRAMOS_DECENAS.keys()):
-    disabled = dec == st.session_state.decena_libre
-    is_doble = dec in st.session_state.decenas_dobles
-    label = f"★ ⭐ {dec}" if is_doble else dec
-    if cols_dd[idx].button(label, key=f"dd_{dec}", disabled=disabled, use_container_width=True):
-        if dec in st.session_state.decenas_dobles: st.session_state.decenas_dobles.remove(dec)
-        elif len(st.session_state.decenas_dobles) < 2: st.session_state.decenas_dobles.append(dec)
-        st.rerun()
+# ==========================================
+# BLOQUE 3: SELECTORES DE UNIDADES Y TERMINACIONES
+# ==========================================
+st.markdown('<div class="seccion-titulo">🎯 Control de Terminaciones</div>', unsafe_allow_html=True)
 
-st.markdown("---")
+unidad_repetida_sel = st.selectbox("Selector Unidad Repetida", ["Al azar"] + list(range(10)))
 
-# --- CONTROL DE UNIDADES ---
-st.subheader("🎯 Parámetros de Unidades (Terminaciones)")
-st.markdown("**Selector Unidad Repetida** (Opción única)")
-cols_ur = st.columns(10)
+st.write("Selector Unidad Vetada (Excluye terminaciones completas - Máx. 4)")
+cols_uni = st.columns(10)
 for u in range(10):
-    is_rep = st.session_state.unidad_repetida == u
-    label = f"★ {u}" if is_rep else str(u)
-    if cols_ur[u].button(label, key=f"ur_{u}", use_container_width=True):
-        st.session_state.unidad_repetida = u
-        if u in st.session_state.unidades_vetadas: st.session_state.unidades_vetadas.remove(u)
+    is_vetada = u in st.session_state.vetadas
+    label_u = f"❌ {u}" if is_vetada else str(u)
+    if cols_uni[u].button(label_u, key=f"vetar_{u}", use_container_width=True):
+        if is_vetada:
+            st.session_state.vetadas.remove(u)
+        elif len(st.session_state.vetadas) < 4:
+            st.session_state.vetadas.append(u)
         st.rerun()
 
-st.markdown("**Selector Unidad Vetada** (Máx. 2 unidades)")
-cols_uv = st.columns(10)
-for u in range(10):
-    disabled = u == st.session_state.unidad_repetida
-    is_vetada = u in st.session_state.unidades_vetadas
-    label = f"★ ❌ {u}" if is_vetada else str(u)
-    if cols_uv[u].button(label, key=f"uv_{u}", disabled=disabled, use_container_width=True):
-        if u in st.session_state.unidades_vetadas: st.session_state.unidades_vetadas.remove(u)
-        elif len(st.session_state.unidades_vetadas) < 2: st.session_state.unidades_vetadas.append(u)
-        st.rerun()
+# ==========================================
+# BLOQUE 4: INTERRUPTORES ESPECIALES
+# ==========================================
+st.markdown('<div class="seccion-titulo">⚡ Filtros Especiales</div>', unsafe_allow_html=True)
+col_sw1, col_sw2 = st.columns(2)
+with col_sw1:
+    selector_mellizos = st.radio("Selector Mellizos (Apuestas 2 y 4)", ["NO", "SÍ"])
+with col_sw2:
+    selector_clumps = st.radio("Selector Clumps (Apuestas 3 y 4)", ["NO", "SÍ"])
 
-st.markdown("---")
+# ==========================================
+# MOTOR DE CÁLCULO DE ALTA POTENCIA
+# ==========================================
+def cumple_filtros_individuales(comb, d_libre, d_dobles, u_repetida, vetadas):
+    # Paridad (3 pares, 3 impares)
+    pares = sum(1 for x in comb if x % 2 == 0)
+    if pares != 3: return False
 
-# --- FILTROS ESPECIALES ---
-st.subheader("⚙️ Filtros Especiales")
-c1, c2 = st.columns(2)
-activar_mellizos = c1.radio("Selector Mellizos", ["NO", "SÍ"], index=0) == "SÍ"
-activar_clumps = c2.radio("Selector Clumps", ["NO", "SÍ"], index=0) == "SÍ"
+    # Estructura Decenas
+    counts_decenas = {k: 0 for k in TRAMOS.keys()}
+    for x in comb:
+        for k, v in TRAMOS.items():
+            if x in v: counts_decenas[k] += 1
+    if counts_decenas[d_libre] != 0: return False
+    dobles_reales = [k for k, v in counts_decenas.items() if v == 2]
+    simples_reales = [k for k, v in counts_decenas.items() if v == 1]
+    if len(dobles_reales) != 2 or len(simples_reales) != 2: return False
+    for d in d_dobles:
+        if counts_decenas[d] != 2: return False
 
-st.markdown("---")
+    # Terminaciones
+    terminaciones = [x % 10 for x in comb]
+    if any(t in vetadas for t in terminaciones): return False
+    counts_term = {t: terminaciones.count(t) for t in set(terminaciones)}
+    rep_2 = [t for t, c in counts_term.items() if c == 2]
+    if len(rep_2) != 1 or len(counts_term) != 5: return False
+    if u_repetida != "Al azar" and rep_2[0] != u_repetida: return False
 
-# --- ASISTENTES DE FILTRADO VELOZ ---
-def obtener_decena(num):
-    if 1 <= num <= 10: return "1-10"
-    if 11 <= num <= 20: return "11-20"
-    if 21 <= num <= 30: return "21-30"
-    if 31 <= num <= 40: return "31-40"
-    if 41 <= num <= 50: return "41-50"
-    return None
+    return True
 
-def validar_paridad(comb):
-    return sum(1 for n in comb if n % 2 == 0) == 3
-
-def validar_unidades(comb, u_rep, u_vet):
-    terms = [n % 10 for n in comb]
-    if any(u in u_vet for u in terms): return False
-    if terms.count(u_rep) != 2: return False
-    restantes = [t for t in terms if t != u_rep]
-    return len(set(restantes)) == len(restantes)
-
-def tiene_consecutivos(comb):
-    sc = sorted(comb)
-    return any(sc[i+1] - sc[i] == 1 for i in range(len(sc)-1))
-
-def contar_consecutivos(comb):
-    sc = sorted(comb)
-    parejas = 0
-    i = 0
-    while i < len(sc) - 1:
-        if sc[i+1] - sc[i] == 1:
-            parejas += 1
-            i += 2
-        else:
-            i += 1
-    return parejas
-
-# --- BOTÓN DE GENERACIÓN MULTI-MATRICIAL ---
-if st.button("⚡ GENERAR COMBINACIONES PROMETEUS", use_container_width=True, type="primary"):
+def generar_motor_prometeus():
+    # Universo Depurado
+    universo = [x for x in range(1, 51) if (x % 10) not in st.session_state.vetadas and x not in TRAMOS[decena_libre]]
     
-    # Universo Limpio de Raíz
-    universo_valido = []
-    for n in range(1, 51):
-        if obtener_decena(n) == st.session_state.decena_libre: continue
-        if n % 10 in st.session_state.unidades_vetadas: continue
-        universo_valido.append(n)
+    # Asignación de Decenas Dobles Automáticas si falta rellenar
+    d_dobles_actuales = list(st.session_state.dobles)
+    opciones_disponibles = [k for k in TRAMOS.keys() if k != decena_libre]
+    while len(d_dobles_actuales) < 2:
+        restantes = [o for o in opciones_disponibles if o not in d_dobles_actuales]
+        if not restantes: break
+        d_dobles_actuales.append(random.choice(restantes))
 
-    r10_limpio = [n for n in st.session_state.recientes_10 if n in universo_valido]
-    r15_limpio = [n for n in st.session_state.recientes_15 if n in universo_valido]
-
-    decenas_restantes = [d for d in TRAMOS_DECENAS.keys() if d != st.session_state.decena_libre]
-    
-    # BANCOS MATRICIALES INDEPENDIENTES POR APUESTA
-    banco_ap1, banco_ap2, banco_ap3, banco_ap4 = [], [], [], []
-    
-    # Pre-generar un pool masivo de combinaciones válidas individuales (Fuerza Bruta Tipo Pool)
-    for _ in range(30000):
-        # Resolver decenas dinámicas si el usuario puso menos de 2
-        if len(st.session_state.decenas_dobles) == 2:
-            dobles_apuesta = st.session_state.decenas_dobles
-        elif len(st.session_state.decenas_dobles) == 1:
-            opciones_validas = [d for d in decenas_restantes if d not in st.session_state.decenas_dobles]
-            dobles_apuesta = st.session_state.decenas_dobles + [random.choice(opciones_validas)]
-        else:
-            dobles_apuesta = random.sample(decenas_restantes, 2)
-            
-        simples_apuesta = [d for d in decenas_restantes if d not in dobles_apuesta]
-        
-        # Construcción directa de base
-        apuesta = set()
-        candidatos_u_rep = [n for n in universo_valido if n % 10 == st.session_state.unidad_repetida]
-        if len(candidatos_u_rep) >= 2:
-            apuesta.update(random.sample(candidatos_u_rep, 2))
-        else:
-            continue
-            
-        # Inyectar un Reciente 10 y dos Recientes 15 de manera aleatoria si existen
-        if r10_limpio: apuesta.add(random.choice(r10_limpio))
-        if r15_limpio: apuesta.update(random.sample(r15_limpio, min(len(r15_limpio), 2)))
-        if len(apuesta) > 6: continue
-            
-        # Rellenar tramo por tramo
-        lista_cand = list(apuesta)
-        for dec in dobles_apuesta:
-            nums = [n for n in universo_valido if obtener_decena(n) == dec and n not in lista_cand]
-            random.shuffle(nums)
-            while sum(1 for x in lista_cand if obtener_decena(x) == dec) < 2 and nums:
-                lista_cand.append(nums.pop())
-        for dec in simples_apuesta:
-            nums = [n for n in universo_valido if obtener_decena(n) == dec and n not in lista_cand]
-            random.shuffle(nums)
-            while sum(1 for x in lista_cand if obtener_decena(x) == dec) < 1 and nums:
-                lista_cand.append(nums.pop())
-                
-        if len(lista_cand) != 6: continue
-        
-        # Filtrado morfológico instantáneo
-        conteos_dec = {d: 0 for d in TRAMOS_DECENAS.keys()}
-        for n in lista_cand: conteos_dec[obtener_decena(n)] += 1
-        if sum(1 for d in dobles_apuesta if conteos_dec[d] == 2) != 2: continue
-        if not validar_paridad(lista_cand): continue
-        if not validar_unidades(lista_cand, st.session_state.unidad_repetida, st.session_state.unidades_vetadas): continue
-        
-        # Clasificar la combinación en el banco correcto según Mellizos y Clumps
-        cont_m = sum(1 for n in lista_cand if n in MELLIZOS)
-        has_c = tiene_consecutivos(lista_cand)
-        num_c = contar_consecutivos(lista_cand)
-        
-        # Clasificación Matricial Directa
-        if activar_mellizos:
-            if cont_m == 0 and not has_c: banco_ap1.append(sorted(lista_cand))
-            if cont_m == 1 and not has_c: banco_ap2.append(sorted(lista_cand))
-            if activar_clumps:
-                if cont_m == 0 and num_c == 1: banco_ap3.append(sorted(lista_cand))
-                if cont_m == 1 and num_c == 1: banco_ap4.append(sorted(lista_cand))
-            else:
-                if cont_m == 0 and not has_c: banco_ap3.append(sorted(lista_cand))
-                if cont_m == 1 and not has_c: banco_ap4.append(sorted(lista_cand))
-        else:
-            if cont_m == 0:
-                if activar_clumps:
-                    if not has_c: banco_ap1.append(sorted(lista_cand))
-                    if not has_c: banco_ap2.append(sorted(lista_cand))
-                    if num_c == 1: banco_ap3.append(sorted(lista_cand))
-                    if num_c == 1: banco_ap4.append(sorted(lista_cand))
-                else:
-                    if not has_c:
-                        c_sorted = sorted(lista_cand)
-                        banco_ap1.append(c_sorted)
-                        banco_ap2.append(c_sorted)
-                        banco_ap3.append(c_sorted)
-                        banco_ap4.append(c_sorted)
-
-    # --- FUERZA BRUTA DE INTERSECCIÓN CRUZADA ALTA VELOCIDAD ---
-    exito = False
     apuestas_finales = []
+    intentos_globales = 0
     
-    # Comprobar que ningún banco esté vacío debido a restricciones manuales incompatibles
-    if banco_ap1 and banco_ap2 and banco_ap3 and banco_ap4:
-        # Ejecuta hasta 5.000.000 de cruces indexados en milisegundos
-        for intento_cruce in range(5000000):
-            ap1 = random.choice(banco_ap1)
-            ap2 = random.choice(banco_ap2)
-            if len(set(ap1) & set(ap2)) > 1: continue
-                
-            ap3 = random.choice(banco_ap3)
-            if len(set(ap1) & set(ap3)) > 1 or len(set(ap2) & set(ap3)) > 1: continue
-                
-            ap4 = random.choice(banco_ap4)
-            if len(set(ap1) & set(ap4)) > 1 or len(set(ap2) & set(ap4)) > 1 or len(set(ap3) & set(ap4)) > 1: continue
-                
-            apuestas_finales = [ap1, ap2, ap3, ap4]
-            exito = True
-            break
+    # Garantizar números disponibles de listas de recientes
+    r10_pool = list(st.session_state.r10)
+    r15_pool = list(st.session_state.r15)
+    
+    while len(apuestas_finales) < 4 and intentos_globales < 5000:
+        intentos_globales += 1
+        num_apuesta = len(apuestas_finales) + 1
+        
+        # Muestreo de Recientes
+        c_r10 = random.sample(r10_pool, 1)[0]
+        c_r15 = random.sample(r15_pool, 2)
+        base_recientes = [c_r10] + c_r15
+        
+        # Filtrar universo eliminando lo ya escogido en las fuentes de recientes
+        resto_universo = [x for x in universo if x not in base_recientes]
+        if len(resto_universo) < 3: continue
+        
+        c_resto = random.sample(resto_universo, 3)
+        candidata = sorted(base_recientes + c_resto)
+        
+        # Regla de Mellizos
+        tiene_mellizo = any(m in candidata for m in MELLIZOS_LIST)
+        es_apuesta_melliza = num_apuesta in [2, 4] and selector_mellizos == "SÍ"
+        
+        if es_apuesta_melliza:
+            # Forzar un mellizo si no lo tiene (Regla de escape interna si están vetados)
+            if not tiene_mellizo:
+                mellizos_validos = [m for m in MELLIZOS_LIST if (m % 10) not in st.session_state.vetadas and m not in TRAMOS[decena_libre]]
+                if mellizos_validos:
+                    candidata[0] = random.choice(mellizos_validos)
+                    candidata = sorted(list(set(candidata)))
+                    if len(candidata) < 6: continue
+            # Validar que tenga exactamente un mellizo
+            if sum(1 for x in candidata if x in MELLIZOS_LIST) != 1: continue
+        else:
+            if selector_mellizos == "SÍ" and tiene_mellizo: continue
+            elif selector_mellizos == "NO" and tiene_mellizo: continue # Filtro base excluidos
 
-    # --- RENDERIZADO ---
-    if exito:
-        st.success("🎯 Combinaciones PROMETEUS generadas con éxito instantáneo:")
-        for idx, ap in enumerate(apuestas_finales, 1):
-            clump_tag = " 🔸 [Clump]" if idx in [3, 4] and activar_clumps else ""
-            mellizo_tag = " 🔹 [Mellizo]" if idx in [2, 4] and activar_mellizos else ""
-            st.markdown(f"""
-            <div class="apuesta-card">
-                <div class="apuesta-titulo">APUESTA MULTIPLE {idx}{mellizo_tag}{clump_tag}</div>
-                <div class="apuesta-numeros">{" · ".join(f"{n:02d}" for n in ap)}</div>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.error("❌ Conflicto combinatorio. Has seleccionado números en 'Recientes' o parámetros de unidades que rompen las leyes de paridad o decenas. Cambia algún número marcado e intenta de nuevo.")
+        # Regla de Clumps (Números Seguidos)
+        consecutivos = sum(1 for idx in range(5) if candidata[idx+1] - candidata[idx] == 1)
+        es_apuesta_clump = num_apuesta in [3, 4] and selector_clumps == "SÍ"
+        
+        if es_apuesta_clump:
+            if consecutivos != 1: continue
+            # Validar escape de unidad vetada o decena libre en el clump
+            par_consecutivo = [(candidata[idx], candidata[idx+1]) for idx in range(5) if candidata[idx+1] - candidata[idx] == 1][0]
+            if any(n in TRAMOS[decena_libre] or (n % 10) in st.session_state.vetadas for n in par_consecutivo): continue
+        else:
+            if consecutivos > 0: continue
+
+        # Validaciones de Filtros Individuales Estrictos
+        if not cumple_filtros_individuales(candidata, decena_libre, d_dobles_actuales, unidad_repetida_sel, st.session_state.vetadas):
+            continue
+
+        # Validación Cruzada: Máximo 1 coincidencia con apuestas ya aprobadas
+        interseccion_ok = True
+        for ap in apuestas_finales:
+            coincidencias = len(set(candidata).intersection(set(ap)))
+            if coincidencias > 1:
+                interseccion_ok = False
+                break
+        
+        if interseccion_ok:
+            apuestas_finales.append(candidata)
+
+    return apuestas_finales
+
+# ==========================================
+# BLOQUE 5: ACCIÓN Y RESULTADOS
+# ==========================================
+st.markdown('<div class="seccion-titulo">🚀 Generador</div>', unsafe_allow_html=True)
+
+# Validación de mínimos de seguridad antes de habilitar el botón
+requisitos_ok = len(st.session_state.r10) >= 4 and len(st.session_state.r15) >= 8
+
+if requisitos_ok:
+    if st.button("🔥 GENERAR COMBINACIONES PROMETEUS", use_container_width=True, type="primary"):
+        resultados = generar_motor_prometeus()
+        
+        if len(resultados) < 4:
+            st.error("La combinación de filtros es restrictiva. Inténtalo de nuevo o amplía los números de las parrillas.")
+        else:
+            st.success("Cálculo finalizado con éxito de forma fluida.")
+            for i, ap u in enumerate(resultados):
+                numeros_str = " ".join(f"{num:02d}" for num in ap)
+                st.markdown(f"""
+                <div class="apuesta-card">
+                    <div class="apuesta-titulo">COMBINACIÓN MÚLTIPLE Nº{i+1}</div>
+                    <div class="apuesta-numeros">{numeros_str}</div>
+                </div>
+                """, unsafe_allow_html=True)
+else:
+    st.warning("Faltan números en las Parrillas Recientes para cumplir con el mínimo de control de seguridad (Mínimo 4 en Recientes 10 y 8 en Recientes 15).")
