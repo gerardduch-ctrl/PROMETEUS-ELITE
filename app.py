@@ -77,7 +77,7 @@ st.markdown("""
 st.markdown('<div class="main-title">PROMETEUS ELITE</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">PROMETEUS ELITE ULTRA 6/50</div>', unsafe_allow_html=True)
 
-# Tramos de decenas fijos
+# Tramos de decenas fijos y Mellizos
 TRAMOS = {
     "1-10": list(range(1, 11)),
     "11-20": list(range(11, 21)),
@@ -191,6 +191,7 @@ def cumple_filtros_individuales(comb, d_libre, d_dobles, u_repetida, vetadas):
     for x in comb:
         for k, v in TRAMOS.items():
             if x in v: counts_decenas[k] += 1
+            
     if counts_decenas[d_libre] != 0: return False
     dobles_reales = [k for k, v in counts_decenas.items() if v == 2]
     simples_reales = [k for k, v in counts_decenas.items() if v == 1]
@@ -232,9 +233,9 @@ def generar_motor_prometeus():
         num_apuesta = len(apuestas_finales) + 1
         
         # Muestreo de Recientes
-        c_r10 = random.sample(r10_pool, 1)[0]
+        c_r10 = random.sample(r10_pool, 1)
         c_r15 = random.sample(r15_pool, 2)
-        base_recientes = [c_r10] + c_r15
+        base_recientes = c_r10 + c_r15
         
         # Filtrar universo eliminando lo ya escogido en las fuentes de recientes
         resto_universo = [x for x in universo if x not in base_recientes]
@@ -268,8 +269,8 @@ def generar_motor_prometeus():
         if es_apuesta_clump:
             if consecutivos != 1: continue
             # Validar escape de unidad vetada o decena libre en el clump
-            par_consecutivo = [(candidata[idx], candidata[idx+1]) for idx in range(5) if candidata[idx+1] - candidata[idx] == 1][0]
-            if any(n in TRAMOS[decena_libre] or (n % 10) in st.session_state.vetadas for n in par_consecutivo): continue
+            par_consecutivo = [(candidata[idx], candidata[idx+1]) for idx in range(5) if candidata[idx+1] - candidata[idx] == 1]
+            if any(n in TRAMOS[decena_libre] or (n % 10) in st.session_state.vetadas for n in par_consecutivo[0]): continue
         else:
             if consecutivos > 0: continue
 
@@ -281,7 +282,7 @@ def generar_motor_prometeus():
         interseccion_ok = True
         for ap in apuestas_finales:
             coincidencias = len(set(candidata).intersection(set(ap)))
-            if coincidencias > 1:
+            if modificaciones > 1 or  coincidencias > 1:
                 interseccion_ok = False
                 break
         
@@ -306,7 +307,7 @@ if requisitos_ok:
             st.error("La combinación de filtros es restrictiva. Inténtalo de nuevo o amplía los números de las parrillas.")
         else:
             st.success("Cálculo finalizado con éxito de forma fluida.")
-            for i, ap u in enumerate(resultados):
+            for i, ap in enumerate(resultados):
                 numeros_str = " ".join(f"{num:02d}" for num in ap)
                 st.markdown(f"""
                 <div class="apuesta-card">
