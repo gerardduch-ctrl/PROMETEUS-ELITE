@@ -71,6 +71,11 @@ st.markdown("""
         padding: 4px 2px !important;
         font-size: 12px !important;
     }
+    /* Forzar que los radio buttons se muestren en línea horizontal si es posible */
+    div[data-testid="stRadio"] > div {
+        flex-direction: row !important;
+        gap: 15px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -92,6 +97,8 @@ if "r10" not in st.session_state: st.session_state.r10 = []
 if "r15" not in st.session_state: st.session_state.r15 = []
 if "vetadas" not in st.session_state: st.session_state.vetadas = []
 if "dobles" not in st.session_state: st.session_state.dobles = []
+if "decena_libre" not in st.session_state: st.session_state.decena_libre = "1-10"
+if "unidad_repetida" not in st.session_state: st.session_state.unidad_repetida = "Al azar"
 
 # ==========================================
 # BLOQUE 1: PARRILLAS DE NÚMEROS RECIENTES
@@ -131,18 +138,31 @@ for i in range(5):
             st.rerun()
 
 # ==========================================
-# BLOQUE 2: SELECTORES DE DECENAS
+# BLOQUE 2: SELECTORES DE DECENAS (DESPLEGADOS)
 # ==========================================
 st.markdown('<div class="seccion-titulo">🔢 Configuración de Decenas</div>', unsafe_allow_html=True)
 
-decena_libre = st.selectbox("Selector Decena Libre (Tendrá 0 números)", list(TRAMOS.keys()))
+st.write("**Selector Decena Libre** (Tendrá 0 números - Elige una)")
+cols_libres = st.columns(5)
+for idx, dec in enumerate(TRAMOS.keys()):
+    is_libre = st.session_state.decena_libre == dec
+    label_l = f"🛑 {dec}" if is_libre else dec
+    if cols_libres[idx].button(label_l, key=f"libre_btn_{dec}", use_container_width=True):
+        st.session_state.decena_libre = dec
+        if dec in st.session_state.dobles:
+            st.session_state.dobles.remove(dec)
+        st.rerun()
 
-st.write("Selector Decenas Dobles (Tendrán 2 números cada una - Máx. 2)")
+st.write("**Selector Decenas Dobles** (Tendrán 2 números cada una - Máx. 2)")
 cols_dec = st.columns(5)
-opciones_decenas = [k for k in TRAMOS.keys() if k != decena_libre]
-for idx, dec in enumerate(opciones_decenas):
+opciones_decenas = [k for k in TRAMOS.keys() if k != st.session_state.decena_libre]
+for idx, dec in enumerate(TRAMOS.keys()):
+    if dec == st.session_state.decena_libre:
+        cols_dec[idx].button(f" Libre", key=f"doble_dis_{dec}", disabled=True, use_container_width=True)
+        continue
     is_doble = dec in st.session_state.dobles
-    if cols_dec[idx].button(f" Doble {dec}" if is_doble else dec, key=f"doble_{dec}", use_container_width=True):
+    label_d = f"🟢 Doble {dec}" if is_doble else dec
+    if cols_dec[idx].button(label_d, key=f"doble_{dec}", use_container_width=True):
         if is_doble:
             st.session_state.dobles.remove(dec)
         elif len(st.session_state.dobles) < 2:
@@ -150,13 +170,21 @@ for idx, dec in enumerate(opciones_decenas):
         st.rerun()
 
 # ==========================================
-# BLOQUE 3: SELECTORES DE UNIDADES Y TERMINACIONES
+# BLOQUE 3: SELECTORES DE UNIDADES (DESPLEGADOS)
 # ==========================================
 st.markdown('<div class="seccion-titulo">🎯 Control de Terminaciones</div>', unsafe_allow_html=True)
 
-unidad_repetida_sel = st.selectbox("Selector Unidad Repetida", ["Al azar"] + list(range(10)))
+st.write("**Selector Unidad Repetida** (Fija la terminación común)")
+cols_rep = st.columns(11)
+opciones_rep = ["Al azar"] + list(range(10))
+for idx, op in enumerate(opciones_rep):
+    is_sel = st.session_state.unidad_repetida == op
+    label_r = f"⭐ {op}" if is_sel else str(op)
+    if cols_rep[idx].button(label_r, key=f"rep_btn_{op}", use_container_width=True):
+        st.session_state.unidad_repetida = op
+        st.rerun()
 
-st.write("Selector Unidad Vetada (Excluye terminaciones completas - Máx. 4)")
+st.write("**Selector Unidad Vetada** (Excluye terminaciones completas - Máx. 4)")
 cols_uni = st.columns(10)
 for u in range(10):
     is_vetada = u in st.session_state.vetadas
@@ -174,32 +202,29 @@ for u in range(10):
 st.markdown('<div class="seccion-titulo">⚡ Filtros Especiales</div>', unsafe_allow_html=True)
 col_sw1, col_sw2 = st.columns(2)
 with col_sw1:
-    selector_mellizos = st.radio("Selector Mellizos (Apuestas 2 y 4)", ["NO", "SÍ"])
+    selector_mellizos = st.radio("Selector Mellizos (Apuestas 2 y 4)", ["NO", "SÍ"], index=0)
 with col_sw2:
-    selector_clumps = st.radio("Selector Clumps (Apuestas 3 y 4)", ["NO", "SÍ"])
+    selector_clumps = st.radio("Selector Clumps (Apuestas 3 y 4)", ["NO", "SÍ"], index=0)
 
 # ==========================================
-# MOTOR DE CÁLCULO DE ALTA POTENCIA
+# MOTOR ULTRA-POTENCIADO POR FILTRADO INVERSO DIRECTO
 # ==========================================
-def cumple_filtros_individuales(comb, d_libre, d_dobles, u_repetida, vetadas):
-    # Paridad (3 pares, 3 impares)
-    pares = sum(1 for x in comb if x % 2 == 0)
-    if pares != 3: return False
+def cumple_filtros_estrictos(comb, d_libre, d_dobles, u_repetida, vetadas, num_apuesta):
+    # 1. Paridad Estricta (3 pares y 3 impares)
+    if sum(1 for x in comb if x % 2 == 0) != 3: return False
 
-    # Estructura Decenas
+    # 2. Estructura Exacta Decenas (2-2-1-1-0)
     counts_decenas = {k: 0 for k in TRAMOS.keys()}
     for x in comb:
         for k, v in TRAMOS.items():
             if x in v: counts_decenas[k] += 1
-            
     if counts_decenas[d_libre] != 0: return False
-    dobles_reales = [k for k, v in counts_decenas.items() if v == 2]
-    simples_reales = [k for k, v in counts_decenas.items() if v == 1]
-    if len(dobles_reales) != 2 or len(simples_reales) != 2: return False
+    if len([k for k, v in counts_decenas.items() if v == 2]) != 2: return False
+    if len([k for k, v in counts_decenas.items() if v == 1]) != 2: return False
     for d in d_dobles:
         if counts_decenas[d] != 2: return False
 
-    # Terminaciones
+    # 3. Control de Terminaciones Únicas
     terminaciones = [x % 10 for x in comb]
     if any(t in vetadas for t in terminaciones): return False
     counts_term = {t: terminaciones.count(t) for t in set(terminaciones)}
@@ -207,88 +232,85 @@ def cumple_filtros_individuales(comb, d_libre, d_dobles, u_repetida, vetadas):
     if len(rep_2) != 1 or len(counts_term) != 5: return False
     if u_repetida != "Al azar" and rep_2[0] != u_repetida: return False
 
+    # 4. Filtro de Mellizos (11, 22, 33, 44)
+    num_mellizos = sum(1 for x in comb if x in MELLIZOS_LIST)
+    if selector_mellizos == "SÍ" and num_apuesta in [2, 4]:
+        if num_mellizos != 1: return False
+        # El mellizo no puede estar en la decena libre ni unidad vetada (Regla de Escape si todo está bloqueado)
+        mellizo_real = [x for x in comb if x in MELLIZOS_LIST][0]
+        if mellizo_real in TRAMOS[d_libre] or (mellizo_real % 10) in vetadas:
+            pass # Se permite por regla de escape acordada si es imposible
+    else:
+        if num_mellizos > 0: return False # Excluidos por defecto
+
+    # 5. Filtro de Clumps (Números Seguidos)
+    consecutivos = sum(1 for idx in range(5) if comb[idx+1] - comb[idx] == 1)
+    if selector_clumps == "SÍ" and num_apuesta in [3, 4]:
+        if consecutivos != 1: return False
+    else:
+        if consecutivos > 0: return False
+
     return True
 
 def generar_motor_prometeus():
-    # Universo Depurado
-    universo = [x for x in range(1, 51) if (x % 10) not in st.session_state.vetadas and x not in TRAMOS[decena_libre]]
+    d_libre = st.session_state.decena_libre
+    vetadas = st.session_state.vetadas
+    u_repetida = st.session_state.unidad_repetida
     
-    # Asignación de Decenas Dobles Automáticas si falta rellenar
+    # Decenas Dobles automáticas si el usuario eligió menos de 2
     d_dobles_actuales = list(st.session_state.dobles)
-    opciones_disponibles = [k for k in TRAMOS.keys() if k != decena_libre]
+    opciones_disponibles = [k for k in TRAMOS.keys() if k != d_libre]
     while len(d_dobles_actuales) < 2:
         restantes = [o for o in opciones_disponibles if o not in d_dobles_actuales]
         if not restantes: break
         d_dobles_actuales.append(random.choice(restantes))
+        
+    d_simples_actuales = [o for o in opciones_disponibles if o not in d_dobles_actuales]
 
     apuestas_finales = []
-    intentos_globales = 0
     
-    # Garantizar números disponibles de listas de recientes
-    r10_pool = list(st.session_state.r10)
-    r15_pool = list(st.session_state.r15)
-    
-    while len(apuestas_finales) < 4 and intentos_globales < 5000:
-        intentos_globales += 1
-        num_apuesta = len(apuestas_finales) + 1
-        
-        # Muestreo de Recientes
-        c_r10 = random.sample(r10_pool, 1)
-        c_r15 = random.sample(r15_pool, 2)
-        base_recientes = c_r10 + c_r15
-        
-        # Filtrar universo eliminando lo ya escogido en las fuentes de recientes
-        resto_universo = [x for x in universo if x not in base_recientes]
-        if len(resto_universo) < 3: continue
-        
-        c_resto = random.sample(resto_universo, 3)
-        candidata = sorted(base_recientes + c_resto)
-        
-        # Regla de Mellizos
-        tiene_mellizo = any(m in candidata for m in MELLIZOS_LIST)
-        es_apuesta_melliza = num_apuesta in [2, 4] and selector_mellizos == "SÍ"
-        
-        if es_apuesta_melliza:
-            # Forzar un mellizo si no lo tiene (Regla de escape interna si están vetados)
-            if not tiene_mellizo:
-                mellizos_validos = [m for m in MELLIZOS_LIST if (m % 10) not in st.session_state.vetadas and m not in TRAMOS[decena_libre]]
-                if mellizos_validos:
-                    candidata[0] = random.choice(mellizos_validos)
-                    candidata = sorted(list(set(candidata)))
-                    if len(candidata) < 6: continue
-            # Validar que tenga exactamente un mellizo
-            if sum(1 for x in candidata if x in MELLIZOS_LIST) != 1: continue
-        else:
-            if selector_mellizos == "SÍ" and tiene_mellizo: continue
-            elif selector_mellizos == "NO" and tiene_mellizo: continue # Filtro base excluidos
+    # Universo segregado para inyección directa ultrarrápida
+    pool_por_decena = {}
+    for dec, num_list in TRAMOS.items():
+        pool_por_decena[dec] = [x for x in num_list if (x % 10) not in vetadas]
 
-        # Regla de Clumps (Números Seguidos)
-        consecutivos = sum(1 for idx in range(5) if candidata[idx+1] - candidata[idx] == 1)
-        es_apuesta_clump = num_apuesta in [3, 4] and selector_clumps == "SÍ"
+    # Ejecución en ráfaga controlada (Súper fluida)
+    for num_apuesta in range(1, 5):
+        encontrada = False
+        intentos = 0
         
-        if es_apuesta_clump:
-            if consecutivos != 1: continue
-            # Validar escape de unidad vetada o decena libre en el clump
-            par_consecutivo = [(candidata[idx], candidata[idx+1]) for idx in range(5) if candidata[idx+1] - candidata[idx] == 1]
-            if any(n in TRAMOS[decena_libre] or (n % 10) in st.session_state.vetadas for n in par_consecutivo[0]): continue
-        else:
-            if consecutivos > 0: continue
+        while not encontrada and intentos < 4000:
+            intentos += 1
+            comb = []
+            
+            # Inyectar la geometría exacta de las decenas para que el cálculo vaya directo y sobrado
+            for d in d_dobles_actuales:
+                if len(pool_por_decena[d]) < 2: continue
+                comb.extend(random.sample(pool_por_decena[d], 2))
+            for d in d_simples_actuales:
+                if len(pool_por_decena[d]) < 1: continue
+                comb.extend(random.sample(pool_por_decena[d], 1))
+                
+            if len(comb) != 6: continue
+            comb.sort()
+            
+            # Forzar controles de extracción requerida de las listas de recientes
+            req_10 = sum(1 for x in comb if x in st.session_state.r10)
+            req_15 = sum(1 for x in comb if x in st.session_state.r15)
+            if req_10 != 1 or req_15 != 2: continue
 
-        # Validaciones de Filtros Individuales Estrictos
-        if not cumple_filtros_individuales(candidata, decena_libre, d_dobles_actuales, unidad_repetida_sel, st.session_state.vetadas):
-            continue
-
-        # Validación Cruzada: Máximo 1 coincidencia con apuestas ya aprobadas
-        interseccion_ok = True
-        for ap in apuestas_finales:
-            coincidencias = len(set(candidata).intersection(set(ap)))
-            if modificaciones > 1 or  coincidencias > 1:
-                interseccion_ok = False
-                break
-        
-        if interseccion_ok:
-            apuestas_finales.append(candidata)
-
+            # Evaluar morfología del filtro
+            if cumple_filtros_estrictos(comb, d_libre, d_dobles_actuales, u_repetida, vetadas, num_apuesta):
+                # Cruzar con apuestas previas (Intersección Máxima de 1 Elemento)
+                interseccion_ok = True
+                for ap in apuestas_finales:
+                    if len(set(comb).intersection(set(ap))) > 1:
+                        interseccion_ok = False
+                        break
+                if interseccion_ok:
+                    apuestas_finales.append(comb)
+                    encontrada = True
+                    
     return apuestas_finales
 
 # ==========================================
@@ -296,7 +318,7 @@ def generar_motor_prometeus():
 # ==========================================
 st.markdown('<div class="seccion-titulo">🚀 Generador</div>', unsafe_allow_html=True)
 
-# Validación de mínimos de seguridad antes de habilitar el botón
+# Mínimos obligatorios pactados para habilitar el botón
 requisitos_ok = len(st.session_state.r10) >= 4 and len(st.session_state.r15) >= 8
 
 if requisitos_ok:
@@ -304,9 +326,9 @@ if requisitos_ok:
         resultados = generar_motor_prometeus()
         
         if len(resultados) < 4:
-            st.error("La combinación de filtros es restrictiva. Inténtalo de nuevo o amplía los números de las parrillas.")
+            st.error("⚠️ Configuración altamente restrictiva. Haz click de nuevo en Generar o añade más números a las Parrillas de Recientes.")
         else:
-            st.success("Cálculo finalizado con éxito de forma fluida.")
+            st.success("Cálculo estructural finalizado con éxito a alta velocidad.")
             for i, ap in enumerate(resultados):
                 numeros_str = " ".join(f"{num:02d}" for num in ap)
                 st.markdown(f"""
@@ -316,4 +338,4 @@ if requisitos_ok:
                 </div>
                 """, unsafe_allow_html=True)
 else:
-    st.warning("Faltan números en las Parrillas Recientes para cumplir con el mínimo de control de seguridad (Mínimo 4 en Recientes 10 y 8 en Recientes 15).")
+    st.warning("🔒 El motor requiere una selección mínima de control en las parrillas superiores: selecciona al menos 4 números en Recientes 10 y 8 números en Recientes 15.")
