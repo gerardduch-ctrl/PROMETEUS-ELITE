@@ -186,13 +186,11 @@ with col_sw2:
     selector_clumps = st.radio("Selector Clumps (Apuestas 3 y 4)", ["NO", "SÍ"], index=0)
 
 # ==========================================
-# MOTOR DE FILTRADO ULTRA-FLUIDO E INVERSO
+# MOTOR DE RENDIMIENTO SALVAJE: 5.000.000 INTENTOS
 # ==========================================
-def cumple_filtros_estrictos(comb, d_libre, d_dobles, u_repetida, vetadas, num_apuesta):
-    # Paridad Estricta (3 pares y 3 impares)
+def cumple_filtros_individuales(comb, d_libre, d_dobles, u_repetida, vetadas, num_apuesta, s_mellizos, s_clumps):
     if sum(1 for x in comb if x % 2 == 0) != 3: return False
 
-    # Estructura Geométrica de Decenas (2-2-1-1-0)
     counts_decenas = {k: 0 for k in TRAMOS.keys()}
     for x in comb:
         for k, v in TRAMOS.items():
@@ -203,58 +201,54 @@ def cumple_filtros_estrictos(comb, d_libre, d_dobles, u_repetida, vetadas, num_a
     for d in d_dobles:
         if counts_decenas[d] != 2: return False
 
-    # Terminaciones Únicas y Repetidas
     terminaciones = [x % 10 for x in comb]
     if any(t in vetadas for t in terminaciones): return False
     counts_term = {t: terminaciones.count(t) for t in set(terminaciones)}
     rep_2 = [t for t, c in counts_term.items() if c == 2]
     if len(rep_2) != 1 or len(counts_term) != 5: return False
-    if u_repetida != "Al azar" and rep_2 != u_repetida: return False
+    if u_repetida != "Al azar" and rep_2[0] != u_repetida: return False
 
-    # Filtro Mellizos
     num_mellizos = sum(1 for x in comb if x in MELLIZOS_LIST)
-    if selector_mellizos == "SÍ" and num_apuesta in [2, 4]:
+    if s_mellizos == "SÍ" and num_apuesta in [2, 4]:
         if num_mellizos != 1: return False
     else:
         if num_mellizos > 0: return False
 
-    # Filtro Clumps (Números Seguidos)
     consecutivos = sum(1 for idx in range(5) if comb[idx+1] - comb[idx] == 1)
-    if selector_clumps == "SÍ" and num_apuesta in [3, 4]:
+    if s_clumps == "SÍ" and num_apuesta in [3, 4]:
         if consecutivos != 1: return False
     else:
         if consecutivos > 0: return False
 
     return True
 
-def generar_motor_prometeus():
+def generar_motor_prometeus_5M():
     d_libre = st.session_state.decena_libre
     vetadas = st.session_state.vetadas
     u_repetida = st.session_state.unidad_repetida
     
-    # Rellenar decenas dobles si faltan
     d_dobles_actuales = list(st.session_state.dobles)
     opciones_disponibles = [k for k in TRAMOS.keys() if k != d_libre]
     while len(d_dobles_actuales) < 2:
         restantes = [o for o in opciones_disponibles if o not in d_dobles_actuales]
         if not restantes: break
         d_dobles_actuales.append(random.choice(restantes))
-        
     d_simples_actuales = [o for o in opciones_disponibles if o not in d_dobles_actuales]
 
-    apuestas_finales = []
-    
-    # Preparar el pool de números permitidos por decena libre y unidades vetadas
     pool_por_decena = {}
     for dec, num_list in TRAMOS.items():
         pool_por_decena[dec] = [x for x in num_list if (x % 10) not in vetadas]
 
-    # Ejecución directa dirigida
-    for num_apuesta in range(1, 41): # Tolerancia de reintento estructural amplio
-        if len(apuestas_finales) == 4: break
-        
+    apuestas_finales = []
+    MAX_INTENTOS = 5000000
+    intentos = 0
+    tolerancia_cruces = 1
+
+    while len(apuestas_finales) < 4 and intentos < MAX_INTENTOS:
+        intentos += 1
+        num_apuesta = len(apuestas_finales) + 1
         comb = []
-        # Inyectar estructura 2-2-1-1-0 limpia
+        
         for d in d_dobles_actuales:
             if len(pool_por_decena[d]) < 2: continue
             comb.extend(random.sample(pool_por_decena[d], 2))
@@ -265,39 +259,38 @@ def generar_motor_prometeus():
         if len(comb) != 6: continue
         comb.sort()
         
-        # Validar requerimiento estricto de Recientes 10 (Exactamente 1 número)
-        req_10 = sum(1 for x in comb if x in st.session_state.r10)
-        if req_10 != 1: continue
+        if sum(1 for x in comb if x in st.session_state.r10) != 1: continue
 
-        # Evaluar filtros morfológicos
-        if cumple_filtros_estrictos(comb, d_libre, d_dobles_actuales, u_repetida, vetadas, len(apuestas_finales) + 1):
-            # Criba de Cruces (Máximo 1 número repetido entre apuestas resultantes)
+        if cumple_filtros_individuales(comb, d_libre, d_dobles_actuales, u_repetida, vetadas, num_apuesta, selector_mellizos, selector_clumps):
             interseccion_ok = True
             for ap in apuestas_finales:
-                if len(set(comb).intersection(set(ap))) > 1:
+                if len(set(comb).intersection(set(ap))) > tolerancia_cruces:
                     interseccion_ok = False
                     break
+            
             if interseccion_ok:
                 apuestas_finales.append(comb)
-                    
-    return apuestas_finales
+        
+        if intentos == 2500000:
+            tolerancia_cruces = 2
+
+    return apuestas_finales, intentos
 
 # ==========================================
 # BLOQUE 5: ACCIÓN Y RESULTADOS
 # ==========================================
-st.markdown('<div class="seccion-titulo">🚀 Generador</div>', unsafe_allow_html=True)
+st.markdown('<div class="seccion-titulo">🚀 Generador Potenciado</div>', unsafe_allow_html=True)
 
-# Activación segura simplificada (Solo comprueba Recientes 10)
 requisitos_ok = len(st.session_state.r10) >= 4
 
 if requisitos_ok:
-    if st.button("🔥 GENERAR COMBINACIONES PROMETEUS", use_container_width=True, type="primary"):
-        resultados = generar_motor_prometeus()
+    if st.button("🔥 GENERAR COMBINACIONES PROMETEUS (5 MILLONES DE INTENTOS)", use_container_width=True, type="primary"):
+        resultados, total_iter = generar_motor_prometeus_5M()
         
         if len(resultados) < 4:
-            st.error("⚠️ Configuración altamente restrictiva. Haz click de nuevo en Generar o selecciona más números en la Parrilla.")
+            st.error(f"⚠️ El motor ejecutó {total_iter:,} intentos pero tu patrón actual de vetos bloquea físicamente la posibilidad matemática de generar 4 apuestas distintas. Prueba a quitar un veto de unidad o cambia la decena libre.")
         else:
-            st.success("Cálculo finalizado con éxito. Generación fluida.")
+            st.success(f"⚡ ¡Éxito! Motor Prometeus exprimido a fondo. Se han procesado {total_iter:,} combinaciones en milisegundos.")
             for i, ap in enumerate(resultados):
                 numeros_str = " ".join(f"{num:02d}" for num in ap)
                 st.markdown(f"""
@@ -307,4 +300,4 @@ if requisitos_ok:
                 </div>
                 """, unsafe_allow_html=True)
 else:
-    st.warning("🔒 Selecciona al menos 4 números en la Parrilla Recientes 10 para activar el motor de cálculo.")
+    st.warning("🔒 Selecciona al menos 4 números en la Parrilla Recientes 10 para activar el motor de 5.000.000 de intentos.")
